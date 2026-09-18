@@ -1196,6 +1196,106 @@ button {
   gap: 10px;
 }
 
+.upcoming-section .section-subtitle {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.upcoming-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
+  gap: 20px;
+}
+
+.upcoming-form,
+.upcoming-list-panel {
+  display: grid;
+  gap: 12px;
+  padding: 22px;
+  border-radius: 26px;
+}
+
+.upcoming-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.upcoming-form input,
+.upcoming-form select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  padding: 11px 12px;
+  color: var(--text);
+  background: var(--input-bg);
+}
+
+.upcoming-task-list {
+  display: grid;
+  gap: 10px;
+  max-height: 310px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-color: var(--accent) transparent;
+}
+
+.upcoming-task-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.upcoming-task-list::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: var(--accent);
+}
+
+.upcoming-task-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.upcoming-task-list input {
+  accent-color: var(--accent);
+}
+
+.upcoming-task-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.upcoming-task-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.upcoming-task-copy span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.empty-state {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 760px) {
+  .upcoming-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 .task-item {
   display: flex;
   align-items: center;
@@ -1256,8 +1356,8 @@ button {
 
 .scroll-reveal {
   opacity: 0;
-  transform: translateY(42px) scale(0.97);
-  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(18px);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: var(--reveal-delay, 0ms);
 }
 
@@ -1274,7 +1374,7 @@ button {
   .scroll-reveal,
   .scroll-reveal.is-visible {
     opacity: 1;
-    transform: none;
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
     transition: none;
   }
 }
