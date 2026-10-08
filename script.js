@@ -70,6 +70,7 @@ dailyDateDisplay.pattern='\\d{4}/\\d{2}/\\d{2}';
 dailyDateDisplay.setAttribute('aria-label','Selected planning date');
 const daysOff=[['2026-09-04','Professional activity day','PD day'],['2026-09-07','Labour Day','Holiday'],['2026-10-12','Thanksgiving Day','Holiday'],['2026-10-23','Professional activity day','PD day'],['2026-11-27','Professional activity day','PD day'],['2026-12-25','Christmas Day','Holiday'],['2027-01-01','New Year’s Day','Holiday'],['2027-01-29','Professional activity day','PD day'],['2027-02-15','Family Day','Holiday'],['2027-03-15','March break begins','Break'],['2027-04-02','Good Friday','Holiday'],['2027-04-23','Professional activity day','PD day'],['2027-05-24','Victoria Day','Holiday'],['2027-06-29','Professional activity day','PD day']];
 const categoryPalette={Personal:{bg:'rgba(139,92,246,0.18)',color:'#8b5cf6'},Birthday:{bg:'rgba(244,114,182,0.18)',color:'#ec4899'},'School event':{bg:'rgba(59,130,246,0.18)',color:'#2563eb'},'Club event':{bg:'rgba(16,185,129,0.18)',color:'#10b981'},Health:{bg:'rgba(34,197,94,0.18)',color:'#22c55e'},Lessons:{bg:'rgba(250,226,142,0.28)',color:'#b08a16'},Homework:{bg:'rgba(251,191,36,0.18)',color:'#f59e0b'},Study:{bg:'rgba(168,85,247,0.18)',color:'#a855f7'},Social:{bg:'rgba(249,115,22,0.18)',color:'#f97316'},Appointment:{bg:'rgba(239,68,68,0.18)',color:'#ef4444'},Holiday:{bg:'rgba(139,92,246,0.18)',color:'#8b5cf6'}};
+  categoryPalette['Exams/tests']={bg:'rgba(222,158,55,0.2)',color:'#c88322'};
 const escape=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
 const getEvents=()=>{try{return JSON.parse(get('events','[]'));}catch{return [];}};
 const getEventId=(event)=>String(event.id||`${event.date||selectedDate}-${event.name||'event'}-${event.category||'Personal'}`).replace(/^event:/,'');
@@ -135,6 +136,9 @@ function setupEventControls(){
  if(weekdayHeader)weekdayHeader.innerHTML='<span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>';
  const category=$('eventCategory');
  if(category&&!Array.from(category.options).some(option=>option.value==='Lessons'))category.add(new Option('Lessons','Lessons'));
+  const upcomingCategory=$('upcomingCategory');
+  [category,upcomingCategory].forEach(select=>{if(select&&!Array.from(select.options).some(option=>option.value==='Exams/tests'))select.add(new Option('Exams/tests','Exams/tests'));});
+const accentPicker=document.querySelector('.accent-picker');if(accentPicker&&!accentPicker.querySelector('[data-accent="gold"]')){const goldSwatch=document.createElement('button');goldSwatch.type='button';goldSwatch.className='swatch';goldSwatch.dataset.accent='gold';goldSwatch.title='Warm gold theme';goldSwatch.setAttribute('aria-label','Warm gold theme');accentPicker.insertBefore(goldSwatch,accentPicker.querySelector('[data-accent="classic"]'));}document.querySelectorAll('.swatch').forEach(b=>b.onclick=()=>{root.dataset.accent=b.dataset.accent;save('accent',b.dataset.accent);});
  const legacyRepeatFields=$('repeatCustomFields');
  if(legacyRepeatFields)legacyRepeatFields.remove();
  const repeat=$('eventRepeat');
