@@ -273,7 +273,36 @@ function setupEventControls(){
  if(category&&!Array.from(category.options).some(option=>option.value==='Lessons'))category.add(new Option('Lessons','Lessons'));
   const upcomingCategory=$('upcomingCategory');
   [category,upcomingCategory].forEach(select=>{if(select&&!Array.from(select.options).some(option=>option.value==='Exams/tests'))select.add(new Option('Exams/tests','Exams/tests'));});
-const accentPicker=document.querySelector('.accent-picker');if(accentPicker&&!accentPicker.querySelector('[data-accent="gold"]')){const goldSwatch=document.createElement('button');goldSwatch.type='button';goldSwatch.className='swatch';goldSwatch.dataset.accent='gold';goldSwatch.title='Warm gold theme';goldSwatch.setAttribute('aria-label','Warm gold theme');accentPicker.insertBefore(goldSwatch,accentPicker.querySelector('[data-accent="classic"]'));}document.querySelectorAll('.swatch').forEach(b=>b.onclick=()=>{root.dataset.accent=b.dataset.accent;save('accent',b.dataset.accent);});
+const accentPicker=document.querySelector('.accent-picker');
+
+// 1. Adds the Gold swatch
+if(accentPicker&&!accentPicker.querySelector('[data-accent="gold"]')){
+  const goldSwatch=document.createElement('button');
+  goldSwatch.type='button';
+  goldSwatch.className='swatch';
+  goldSwatch.dataset.accent='gold';
+  goldSwatch.title='Warm gold theme';
+  goldSwatch.setAttribute('aria-label','Warm gold theme');
+  accentPicker.insertBefore(goldSwatch,accentPicker.querySelector('[data-accent="classic"]'));
+}
+
+// 2. Adds the Pink swatch
+if(accentPicker&&!accentPicker.querySelector('[data-accent="pink"]')){
+  const pinkSwatch=document.createElement('button');
+  pinkSwatch.type='button';
+  pinkSwatch.className='swatch';
+  pinkSwatch.dataset.accent='pink';
+  pinkSwatch.title='Pink theme';
+  pinkSwatch.setAttribute('aria-label','Pink theme');
+  accentPicker.insertBefore(pinkSwatch,accentPicker.querySelector('[data-accent="classic"]'));
+}
+
+// 3. Binds the click event to all swatches (leave this as is)
+document.querySelectorAll('.swatch').forEach(b=>b.onclick=()=>{
+  root.dataset.accent=b.dataset.accent;
+  save('accent',b.dataset.accent);
+});
+
  const legacyRepeatFields=$('repeatCustomFields');
  if(legacyRepeatFields)legacyRepeatFields.remove();
  const repeat=$('eventRepeat');
