@@ -3545,7 +3545,7 @@ body.parallax-off .parallax {
 }
 
 .custom-table-wrapper {
-  overflow-x: auto;
+  overflow: visible; /* Changed from overflow-x: auto to prevent dropdown clipping */
   border-radius: 16px;
   border: 1px solid var(--panel-border);
   background: var(--control-bg);
@@ -3667,4 +3667,85 @@ body.parallax-off .parallax {
   flex-shrink: 0;
   border: 1px solid var(--panel-border);
   background: var(--input-bg);
+}
+
+/* Custom Multi-Select Dropdown */
+.multi-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.multi-select-toggle {
+  width: 100%;
+  min-width: 140px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: inherit;
+  padding: 6px 8px;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 34px;
+}
+
+.multi-select-toggle:focus,
+.multi-select-container.is-open .multi-select-toggle {
+  border-color: var(--accent);
+  background: var(--input-bg);
+  outline: none;
+}
+
+.multi-select-toggle::after {
+  content: "⌄";
+  font-size: 1.2rem;
+  line-height: 0.5;
+  margin-left: 8px;
+  color: var(--muted);
+}
+
+.multi-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: max-content;
+  min-width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 8px;
+  z-index: 50;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+  backdrop-filter: blur(22px);
+}
+
+.multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.multi-select-option:hover {
+  background: var(--accent-soft);
+}
+
+.multi-select-option input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  width: auto;
+  margin: 0;
 }

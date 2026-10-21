@@ -643,7 +643,7 @@ const tableTemplates = {
   watching: [
     { name: 'Name', type: 'text' },
     { name: 'Type', type: 'select', options: ['Drama', 'TV Show', 'Movie', 'Documentary', 'Anime'] },
-    { name: 'Genre', type: 'text', placeholder: 'Funny, Romance...' },
+    { name: 'Genre', type: 'multiselect', options: ['Action', 'Comedy', 'Drama', 'Fantasy', 'Horror', 'Romance', 'Sci-Fi', 'Thriller', 'Documentary'] },
     { name: 'Rate', type: 'select', options: ['★', '★★', '★★★', '★★★★', '★★★★★'] },
     { name: 'Progress', type: 'select', options: ['Not Started', 'Currently Watching', 'Watch Next', 'Done'] },
     { name: 'Image Link', type: 'text' }
@@ -662,6 +662,7 @@ const tableTemplates = {
   book: [
     { name: 'Title', type: 'text' },
     { name: 'Author', type: 'text' },
+    { name: 'Genre', type: 'multiselect', options: ['Fiction', 'Non-Fiction', 'Fantasy', 'Sci-Fi', 'Mystery', 'Biography', 'Romance', 'Historical'] },
     { name: 'Status', type: 'select', options: ['To Read', 'Reading', 'Finished'] },
     { name: 'Rating', type: 'select', options: ['1', '2', '3', '4', '5'] }
   ],
@@ -699,7 +700,7 @@ function setupPersonalSpace() {
     }
   };
 
-  // Command detection
+  // Command detection for typing bar
   typingBar.addEventListener('input', (e) => {
     const val = e.target.value;
     if (val === '/') {
@@ -769,13 +770,11 @@ function renderPersonalTables() {
         <table class="custom-table">
           <thead><tr>`;
     
-    // Headers
     table.columns.forEach(col => {
       html += `<th>${escape(col.name)}</th>`;
     });
     html += `</tr></thead><tbody>`;
     
-    // Rows
     let totalCalc = 0;
     table.rows.forEach((row, rIdx) => {
       html += `<tr>`;
@@ -783,12 +782,29 @@ function renderPersonalTables() {
         let val = row[col.name] || '';
         let cellInner = '';
 
-        // Build the input element
         if (col.type === 'select') {
           cellInner = `<select onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)">
             <option value=""></option>
             ${col.options ? col.options.map(opt => `<option value="${escape(opt)}" ${val === opt ? 'selected' : ''}>${escape(opt)}</option>`).join('') : ''}
           </select>`;
+        } else if (col.type === 'multiselect') {
+          // Custom multiselect dropdown
+          let selectedVals = typeof val === 'string' && val ? val.split(', ') : (Array.isArray(val) ? val : []);
+          let displayTxt = selectedVals.length ? selectedVals.join(', ') : 'Select...';
+          
+          cellInner = `
+            <div class="multi-select-container" id="multi-${table.id}-${rIdx}-${cIdx}">
+              <button class="multi-select-toggle" type="button" onclick="toggleMultiSelect('${table.id}', ${rIdx}, ${cIdx})">${escape(displayTxt)}</button>
+              <div class="multi-select-dropdown" id="multi-drop-${table.id}-${rIdx}-${cIdx}" hidden>
+                ${col.options ? col.options.map(opt => `
+                  <label class="multi-select-option" onclick="event.stopPropagation()">
+                    <input type="checkbox" value="${escape(opt)}" ${selectedVals.includes(opt) ? 'checked' : ''} 
+                           onchange="updateCustomMultiSelect('${table.id}',${rIdx}, ${cIdx}, '${escape(col.name)}')">
+                    ${escape(opt)}
+                  </label>
+                `).join('') : ''}
+              </div>
+            </div>`;
         } else if (col.type === 'number') {
           cellInner = `<input type="number" value="${val}" onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" />`;
           if (col.isFinancial) totalCalc += Number(val) || 0;
@@ -800,14 +816,15 @@ function renderPersonalTables() {
             oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'">${escape(val)}</textarea>`;
         }
 
-        // Check for an image link on the first column
+        // Image check on first column
         let imageHtml = '';
-        if (cIdx === 0 && row['Image Link'] && String(row['Image Link']).match(/^https?:\/\//)) {
-          imageHtml = `<img src="${escape(row['Image Link'])}" class="row-thumbnail" alt="" onerror="this.style.display='none'" />`;
-        }
-
-        // Wrap in a flex container if an image exists
-        if (imageHtml) {
+        if (cIdx === 0) {
+          let valImage = row['Image Link'] || '';
+          imageHtml = `<div id="img-wrap-${table.id}-${rIdx}" style="display:contents">`;
+          if (valImage.match(/^https?:\/\//)) {
+            imageHtml += `<img src="${escape(valImage)}" class="row-thumbnail" alt="" onerror="this.style.display='none'" />`;
+          }
+          imageHtml += `</div>`;
           html += `<td><div class="cell-with-image">${imageHtml}${cellInner}</div></td>`;
         } else {
           html += `<td>${cellInner}</td>`;
@@ -816,7 +833,6 @@ function renderPersonalTables() {
       html += `</tr>`;
     });
 
-    // Financial Total Footer
     if (table.type === 'financial') {
       html += `<tr class="table-total-row">
         <td colspan="${table.columns.length - 1}" style="text-align: right;"><strong>Total:</strong></td>
@@ -830,7 +846,6 @@ function renderPersonalTables() {
     return html;
   }).join('');
 
-  // Automatically adjust the height of all textareas to fit existing content on load
   setTimeout(() => {
     container.querySelectorAll('textarea').forEach(ta => {
       ta.style.height = 'auto';
@@ -844,7 +859,20 @@ window.updateTableCell = function(tableId, rowIdx, colName, value) {
   const table = personalTables.find(t => t.id === tableId);
   if(table) {
     table.rows[rowIdx][colName] = value;
-    savePersonalTables();
+    savePersonalTables(); 
+    
+    // Update image instantly
+    if (colName === 'Image Link') {
+      const imgWrap = document.getElementById(`img-wrap-${tableId}-${rowIdx}`);
+      if (imgWrap) {
+        if (value.match(/^https?:\/\//)) {
+          imgWrap.innerHTML = `<img src="${escape(value)}" class="row-thumbnail" alt="" onerror="this.style.display='none'" />`;
+        } else {
+          imgWrap.innerHTML = '';
+        }
+      }
+    }
+    
     if(table.type === 'financial') renderPersonalTables(); 
   }
 };
@@ -857,6 +885,46 @@ window.addTableRow = function(tableId) {
     renderPersonalTables();
   }
 };
+
+// Global functions for the custom multiselect
+window.toggleMultiSelect = function(tableId, rIdx, cIdx) {
+  document.querySelectorAll('.multi-select-dropdown').forEach(drop => {
+    if (drop.id !== `multi-drop-${tableId}-${rIdx}-${cIdx}`) {
+      drop.hidden = true;
+      drop.parentElement.classList.remove('is-open');
+    }
+  });
+  
+  const dropdown = document.getElementById(`multi-drop-${tableId}-${rIdx}-${cIdx}`);
+  const container = document.getElementById(`multi-${tableId}-${rIdx}-${cIdx}`);
+  
+  if (dropdown) {
+    dropdown.hidden = !dropdown.hidden;
+    container.classList.toggle('is-open', !dropdown.hidden);
+  }
+};
+
+window.updateCustomMultiSelect = function(tableId, rIdx, cIdx, colName) {
+  const dropdown = document.getElementById(`multi-drop-${tableId}-${rIdx}-${cIdx}`);
+  const toggle = document.querySelector(`#multi-${tableId}-${rIdx}-${cIdx} .multi-select-toggle`);
+  
+  if (dropdown && toggle) {
+    const checked = Array.from(dropdown.querySelectorAll('input:checked')).map(cb => cb.value);
+    const valStr = checked.join(', ');
+    toggle.textContent = valStr || 'Select...';
+    updateTableCell(tableId, rIdx, colName, valStr);
+  }
+};
+
+// Listen for clicks outside the multi-select to close them
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.multi-select-container')) {
+    document.querySelectorAll('.multi-select-dropdown').forEach(drop => {
+      drop.hidden = true;
+      drop.parentElement.classList.remove('is-open');
+    });
+  }
+});
 
 window.renderCustomizer = function(tableId) {
   activeTableId = tableId;
@@ -873,7 +941,6 @@ window.renderCustomizer = function(tableId) {
   $('activeTableName').textContent = table.title;
   
   content.innerHTML = table.columns.map((col, idx) => {
-    // Lock the first column ("Name/Title") from type changes and deletion
     const isPrimary = idx === 0; 
     
     let html = `
@@ -885,7 +952,6 @@ window.renderCustomizer = function(tableId) {
           ${!isPrimary ? `<button class="delete-task" onclick="removeTableColumn('${table.id}',${idx})" title="Remove Column">×</button>` : ''}
         </div>`;
     
-    // Add type selector and options input for all except the first column
     if (!isPrimary) {
       html += `
         <div style="display: flex; gap: 8px; width: 100%;">
@@ -893,11 +959,12 @@ window.renderCustomizer = function(tableId) {
                   onchange="changeTableColumnType('${table.id}', ${idx}, this.value)">
             <option value="text" ${col.type === 'text' ? 'selected' : ''}>Text</option>
             <option value="select" ${col.type === 'select' ? 'selected' : ''}>Select</option>
+            <option value="multiselect" ${col.type === 'multiselect' ? 'selected' : ''}>Multi-Select</option>
             <option value="number" ${col.type === 'number' ? 'selected' : ''}>Number</option>
             <option value="date" ${col.type === 'date' ? 'selected' : ''}>Date</option>
           </select>`;
       
-      if (col.type === 'select') {
+      if (col.type === 'select' || col.type === 'multiselect') {
         const opts = col.options ? col.options.join(', ') : '';
         html += `<input type="text" placeholder="Options (comma separated)" value="${escape(opts)}"
                   style="flex: 1; min-width: 0; background: var(--control-bg); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px; padding: 4px 8px; font-size: 0.75rem;"
@@ -910,28 +977,25 @@ window.renderCustomizer = function(tableId) {
     return html;
   }).join('');
 
-  content.innerHTML += `<button class="primary-btn mt-3" style="background: #865454; border-color: #865454; color: white;" onclick="deleteTable('${table.id}')">Delete Entire Table</button>`;
+  content.innerHTML += `<button class="primary-btn mt-3" style="background: #ef4444; border-color: #dc2626; color: white;" onclick="deleteTable('${table.id}')">Delete Entire Table</button>`;
 };
 
-// New function to handle column type changes
 window.changeTableColumnType = function(tableId, colIdx, newType) {
   const table = personalTables.find(t => t.id === tableId);
   if (table) {
     table.columns[colIdx].type = newType;
     if (newType === 'select' && !table.columns[colIdx].options) {
-      table.columns[colIdx].options = ['Option 1', 'Option 2']; // Default options
+      table.columns[colIdx].options = ['Option 1', 'Option 2']; 
     }
     savePersonalTables();
     renderPersonalTables();
-    renderCustomizer(tableId); // Re-render to show/hide the options input
+    renderCustomizer(tableId); 
   }
 };
 
-// New function to update the dropdown options
 window.updateTableColumnOptions = function(tableId, colIdx, optionsStr) {
   const table = personalTables.find(t => t.id === tableId);
   if (table) {
-    // Split by comma, trim whitespace, and remove empty entries
     table.columns[colIdx].options = optionsStr.split(',').map(s => s.trim()).filter(Boolean);
     savePersonalTables();
     renderPersonalTables();
@@ -976,6 +1040,7 @@ window.deleteTable = function(tableId) {
   }
 };
 
+// Initialize the Personal Workspace
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(setupPersonalSpace, 100);
 });
