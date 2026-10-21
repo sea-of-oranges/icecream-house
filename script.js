@@ -344,13 +344,22 @@ function updateClock(){const now=new Date(),d=new Date(now);if(customClock)d.set
 function setupWorkspace(){
  const main=$('workspaceMain');
  const sections=[...main.querySelectorAll(':scope > section')];
- const pages={home:document.createElement('div'),calendar:document.createElement('div'),study:document.createElement('div'),tools:document.createElement('div'),addon:document.createElement('div')};
- for(const [name,page] of Object.entries(pages)){page.className=`workspace-view workspace-view-${name}`;page.dataset.workspacePage=name;if(name==='addon')page.hidden=true;else if(name!=='home')page.hidden=true;}
+ // Add 'personal' to the pages object
+ const pages={home:document.createElement('div'),calendar:document.createElement('div'),study:document.createElement('div'),tools:document.createElement('div'),personal:document.createElement('div'),addon:document.createElement('div')};
+ 
+ for(const [name,page] of Object.entries(pages)){
+   page.className=`workspace-view workspace-view-${name}`;
+   page.dataset.workspacePage=name;
+   if(name==='addon')page.hidden=true;
+   else if(name!=='home')page.hidden=true;
+ }
+ 
  for(const section of sections){
-   const destination=section.id==='top'||section.id==='customize'||section.classList.contains('background-studio')?'home':section.id==='planner'||section.id==='upcoming'?'calendar':section.id==='tools'?'tools':section.id==='studyWorkspace'?'study':section.id==='timerPage'||section.id==='quickNotePage'?'addon':'home';
+   // Update routing to catch 'personalWorkspace'
+   const destination=section.id==='top'||section.id==='customize'||section.classList.contains('background-studio')?'home':section.id==='planner'||section.id==='upcoming'?'calendar':section.id==='tools'?'tools':section.id==='studyWorkspace'?'study':section.id==='personalWorkspace'?'personal':section.id==='timerPage'||section.id==='quickNotePage'?'addon':'home';
    pages[destination].append(section);
  }
- main.replaceChildren(pages.home,pages.calendar,pages.study,pages.tools,pages.addon);
+ main.replaceChildren(pages.home,pages.calendar,pages.study,pages.tools,pages.personal,pages.addon);
  document.querySelectorAll('[data-workspace-view]').forEach(link=>link.addEventListener('click',event=>{
    event.preventDefault();
    showPage(link.dataset.workspaceView,true);
@@ -617,6 +626,325 @@ function setupStudy(){
  if(!$('assessmentDate').value)$('assessmentDate').value=localToday();
  renderStudyView();
 }
+// --- Personal Workspace Logic ---
+let personalTables = [];
+let activeTableId = null;
+
+const tableTemplates = {
+  watching: [
+    { name: 'Name', type: 'text' },
+    { name: 'Type', type: 'select', options: ['Drama', 'TV Show', 'Movie', 'Documentary', 'Anime'] },
+    { name: 'Genre', type: 'text', placeholder: 'Funny, Romance...' },
+    { name: 'Rate', type: 'select', options: ['★', '★★', '★★★', '★★★★', '★★★★★'] },
+    { name: 'Progress', type: 'select', options: ['Not Started', 'Currently Watching', 'Watch Next', 'Done'] },
+    { name: 'Image Link', type: 'text' }
+  ],
+  financial: [
+    { name: 'Item', type: 'text' },
+    { name: 'Category', type: 'select', options: ['Income', 'Expense', 'Savings'] },
+    { name: 'Amount', type: 'number', isFinancial: true },
+    { name: 'Date', type: 'date' }
+  ],
+  data: [
+    { name: 'Title', type: 'text' },
+    { name: 'Status', type: 'select', options: ['Active', 'Archived', 'Pending'] },
+    { name: 'Notes', type: 'text' }
+  ],
+  book: [
+    { name: 'Title', type: 'text' },
+    { name: 'Author', type: 'text' },
+    { name: 'Status', type: 'select', options: ['To Read', 'Reading', 'Finished'] },
+    { name: 'Rating', type: 'select', options: ['1', '2', '3', '4', '5'] }
+  ],
+  custom: [
+    { name: 'Column 1', type: 'text' },
+    { name: 'Column 2', type: 'text' }
+  ]
+};
+
+function setupPersonalSpace() {
+  const typingContainer = $('typingContainer');
+  const typingBar = $('personalCommandInput');
+  const toggleBtn = $('toggleTypingBar');
+  const commandDropdown = $('commandDropdown');
+  const typeModal = $('tableTypeModal');
+
+  // Load saved tables from cloud/localStorage
+  try {
+    personalTables = JSON.parse(get('personalTables', '[]'));
+  } catch (e) {
+    personalTables = [];
+  }
+  renderPersonalTables();
+
+  if(!typingBar) return;
+
+  // Toggle Typing Bar
+  toggleBtn.onclick = () => {
+    const isHidden = typingContainer.classList.toggle('is-hidden');
+    toggleBtn.textContent = isHidden ? 'Unhide Typing Bar' : 'Hide Typing Bar';
+    if(isHidden) {
+      commandDropdown.hidden = true;
+      typeModal.hidden = true;
+      typingBar.value = '';
+    }
+  };
+
+  // Command detection
+  typingBar.addEventListener('input', (e) => {
+    const val = e.target.value;
+    if (val === '/') {
+      commandDropdown.hidden = false;
+    } else if (val.startsWith('/create_new_table')) {
+      commandDropdown.hidden = false;
+    } else {
+      commandDropdown.hidden = true;
+    }
+  });
+
+  // Select Command
+  commandDropdown.onclick = (e) => {
+    const btn = e.target.closest('.command-btn');
+    if (!btn) return;
+    if (btn.dataset.cmd === '/create_new_table') {
+      typingBar.value = '';
+      commandDropdown.hidden = true;
+      typeModal.hidden = false;
+    }
+  };
+
+  // Choose Table Type
+  typeModal.onclick = (e) => {
+    if(e.target.tagName !== 'BUTTON') return;
+    const type = e.target.dataset.type;
+    typeModal.hidden = true;
+    createNewTable(type);
+  };
+  
+  // Customizer Add Column
+  $('addColumnBtn').onclick = () => {
+    if(!activeTableId) return;
+    const tableDef = personalTables.find(t => t.id === activeTableId);
+    tableDef.columns.push({ name: `New Column`, type: 'text' });
+    savePersonalTables();
+    renderPersonalTables();
+    renderCustomizer(activeTableId);
+  };
+}
+
+function savePersonalTables() {
+  save('personalTables', JSON.stringify(personalTables));
+}
+
+function createNewTable(type) {
+  const newTable = {
+    id: 'tbl_' + Date.now(),
+    type: type,
+    title: type.charAt(0).toUpperCase() + type.slice(1) + ' List',
+    columns: JSON.parse(JSON.stringify(tableTemplates[type])),
+    rows: [{}, {}, {}] 
+  };
+  personalTables.push(newTable);
+  savePersonalTables();
+  activeTableId = newTable.id;
+  renderPersonalTables();
+  renderCustomizer(newTable.id);
+}
+
+function renderPersonalTables() {
+  const container = $('personalTablesContainer');
+  container.innerHTML = personalTables.map(table => {
+    let html = `<div class="personal-table-block" data-table-id="${table.id}">
+      <h3 style="margin-bottom: 12px; cursor: pointer;" onclick="renderCustomizer('${table.id}')">${escape(table.title)} <span>⚙️</span></h3>
+      <div class="custom-table-wrapper">
+        <table class="custom-table">
+          <thead><tr>`;
+    
+    // Headers
+    table.columns.forEach(col => {
+      html += `<th>${escape(col.name)}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+    
+    // Rows
+    let totalCalc = 0;
+    table.rows.forEach((row, rIdx) => {
+      html += `<tr>`;
+      table.columns.forEach((col, cIdx) => {
+        let val = row[col.name] || '';
+        if (col.type === 'select') {
+          html += `<td><select onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)">
+            <option value=""></option>
+            ${col.options.map(opt => `<option value="${escape(opt)}" ${val === opt ? 'selected' : ''}>${escape(opt)}</option>`).join('')}
+          </select></td>`;
+        } else if (col.type === 'number') {
+          html += `<td><input type="number" value="${val}" onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" /></td>`;
+          if (col.isFinancial) totalCalc += Number(val) || 0;
+        } else if (col.type === 'date') {
+          html += `<td><input type="date" value="${val}" onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" /></td>`;
+        } else {
+          html += `<td><input type="text" placeholder="${col.placeholder || ''}" value="${escape(val)}" onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" /></td>`;
+        }
+      });
+      html += `</tr>`;
+    });
+
+    // Financial Total Footer
+    if (table.type === 'financial') {
+      html += `<tr class="table-total-row">
+        <td colspan="${table.columns.length - 1}" style="text-align: right;"><strong>Total:</strong></td>
+        <td>$${totalCalc.toFixed(2)}</td>
+      </tr>`;
+    }
+    
+    html += `</tbody></table></div>
+      <button class="soft-btn" style="margin-top:8px; font-size:0.8rem;" onclick="addTableRow('${table.id}')">+ Add Row</button>
+    </div>`;
+    return html;
+  }).join('');
+}
+
+// Global functions for inline HTML handlers
+window.updateTableCell = function(tableId, rowIdx, colName, value) {
+  const table = personalTables.find(t => t.id === tableId);
+  if(table) {
+    table.rows[rowIdx][colName] = value;
+    savePersonalTables();
+    if(table.type === 'financial') renderPersonalTables(); 
+  }
+};
+
+window.addTableRow = function(tableId) {
+  const table = personalTables.find(t => t.id === tableId);
+  if(table) {
+    table.rows.push({});
+    savePersonalTables();
+    renderPersonalTables();
+  }
+};
+
+window.renderCustomizer = function(tableId) {
+  activeTableId = tableId;
+  const customizer = $('tableCustomizer');
+  const content = $('customizerContent');
+  const table = personalTables.find(t => t.id === tableId);
+  
+  if(!table) {
+    customizer.hidden = true;
+    return;
+  }
+  
+  customizer.hidden = false;
+  $('activeTableName').textContent = table.title;
+  
+  content.innerHTML = table.columns.map((col, idx) => {
+    // Lock the first column ("Name/Title") from type changes and deletion
+    const isPrimary = idx === 0; 
+    
+    let html = `
+      <div class="customizer-item" style="display: flex; flex-direction: column; align-items: flex-start; gap: 8px;">
+        <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
+          <input type="text" value="${escape(col.name)}" 
+            style="background: transparent; border: 1px solid transparent; color: var(--text); width: 60%; font-weight: 800;"
+            onchange="renameTableColumn('${table.id}', ${idx}, this.value)" />
+          ${!isPrimary ? `<button class="delete-task" onclick="removeTableColumn('${table.id}',${idx})" title="Remove Column">×</button>` : ''}
+        </div>`;
+    
+    // Add type selector and options input for all except the first column
+    if (!isPrimary) {
+      html += `
+        <div style="display: flex; gap: 8px; width: 100%;">
+          <select style="background: var(--control-bg); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px; padding: 4px 6px; width: 35%; font-size: 0.75rem;"
+                  onchange="changeTableColumnType('${table.id}', ${idx}, this.value)">
+            <option value="text" ${col.type === 'text' ? 'selected' : ''}>Text</option>
+            <option value="select" ${col.type === 'select' ? 'selected' : ''}>Select</option>
+            <option value="number" ${col.type === 'number' ? 'selected' : ''}>Number</option>
+            <option value="date" ${col.type === 'date' ? 'selected' : ''}>Date</option>
+          </select>`;
+      
+      if (col.type === 'select') {
+        const opts = col.options ? col.options.join(', ') : '';
+        html += `<input type="text" placeholder="Options (comma separated)" value="${escape(opts)}"
+                  style="flex: 1; min-width: 0; background: var(--control-bg); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px; padding: 4px 8px; font-size: 0.75rem;"
+                  onchange="updateTableColumnOptions('${table.id}', ${idx}, this.value)" />`;
+      }
+      html += `</div>`;
+    }
+    
+    html += `</div>`;
+    return html;
+  }).join('');
+
+  content.innerHTML += `<button class="primary-btn mt-3" style="background: #ef4444; border-color: #dc2626; color: white;" onclick="deleteTable('${table.id}')">Delete Entire Table</button>`;
+};
+
+// New function to handle column type changes
+window.changeTableColumnType = function(tableId, colIdx, newType) {
+  const table = personalTables.find(t => t.id === tableId);
+  if (table) {
+    table.columns[colIdx].type = newType;
+    if (newType === 'select' && !table.columns[colIdx].options) {
+      table.columns[colIdx].options = ['Option 1', 'Option 2']; // Default options
+    }
+    savePersonalTables();
+    renderPersonalTables();
+    renderCustomizer(tableId); // Re-render to show/hide the options input
+  }
+};
+
+// New function to update the dropdown options
+window.updateTableColumnOptions = function(tableId, colIdx, optionsStr) {
+  const table = personalTables.find(t => t.id === tableId);
+  if (table) {
+    // Split by comma, trim whitespace, and remove empty entries
+    table.columns[colIdx].options = optionsStr.split(',').map(s => s.trim()).filter(Boolean);
+    savePersonalTables();
+    renderPersonalTables();
+  }
+};
+
+window.renameTableColumn = function(tableId, colIdx, newName) {
+  const table = personalTables.find(t => t.id === tableId);
+  if(table && newName.trim()) {
+    const oldName = table.columns[colIdx].name;
+    table.columns[colIdx].name = newName.trim();
+    table.rows.forEach(row => {
+      row[newName.trim()] = row[oldName];
+      delete row[oldName];
+    });
+    savePersonalTables();
+    renderPersonalTables();
+  }
+};
+
+window.removeTableColumn = function(tableId, colIdx) {
+  const table = personalTables.find(t => t.id === tableId);
+  if(table) {
+    const colName = table.columns[colIdx].name;
+    table.columns.splice(colIdx, 1);
+    table.rows.forEach(row => delete row[colName]);
+    savePersonalTables();
+    renderPersonalTables();
+    renderCustomizer(tableId);
+  }
+};
+
+window.deleteTable = function(tableId) {
+  if (window.confirm("Are you sure you want to delete this table? This cannot be undone.")) {
+    personalTables = personalTables.filter(t => t.id !== tableId);
+    savePersonalTables();
+    if (activeTableId === tableId) {
+      activeTableId = null;
+      $('tableCustomizer').hidden = true;
+    }
+    renderPersonalTables();
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(setupPersonalSpace, 100);
+});
+
 let clockInterval=null;
 function init(){renderSchool();renderMonth();selectDate(selectedDate);renderTasks('weekly');loadWeather();setupStudy();renderMoodPicker();setupSongPlayer();$('clockFormat').value=get('clockFormat','12');customClock=get('clockTime')||null;updateClock();if(!clockInterval)clockInterval=setInterval(updateClock,1000);$('quickNoteInput').value=get('quickNote');$('backgroundUrl').value=get('background','').startsWith('http')?get('background'):'';let bg=get('background');if(bg)root.style.setProperty('--custom-bg-image',`url("${bg}")`);root.dataset.accent=get('accent','purple');root.dataset.theme=get('theme','dark');$('modeToggle').textContent=root.dataset.theme==='light'?'Day':'Night';const pulseOn=localStorage.getItem('icecreamHousePulse')==='on';const parallaxOn=localStorage.getItem('icecreamHouseParallax')!=='off';document.body.classList.toggle('pulse-active',pulseOn);document.body.classList.toggle('parallax-off',!parallaxOn);const parallaxButton=$('parallaxButton');if(parallaxButton) parallaxButton.textContent=parallaxOn?'Parallax mode':'Parallax off';document.querySelectorAll('.tool-card,.widget,.content-section,.custom-panel,.app-page,.quote-panel,.insight-panel').forEach((el,index)=>{el.classList.add('scroll-reveal');el.style.setProperty('--reveal-delay',`${index * 60}ms`);});const revealObserver=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');}else{entry.target.classList.remove('is-visible');}});},{threshold:0.12});document.querySelectorAll('.scroll-reveal').forEach(el=>revealObserver.observe(el));const range=$('focusRange');const focusValue=$('focusValue');if(range&&focusValue){const updateFocus=()=>{focusValue.textContent=`${range.value}%`;document.documentElement.style.setProperty('--focus-level',range.value);};updateFocus();range.oninput=updateFocus;}}
 document.querySelectorAll('.swatch').forEach(b=>b.onclick=()=>{root.dataset.accent=b.dataset.accent;save('accent',b.dataset.accent);});$('modeToggle').onclick=()=>{let t=root.dataset.theme==='light'?'dark':'light';root.dataset.theme=t;save('theme',t);$('modeToggle').textContent=t==='light'?'Day':'Night';};
