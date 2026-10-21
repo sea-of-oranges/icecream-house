@@ -104,7 +104,8 @@ const siteUpdates=[
   'Introduced a command-based typing bar (e.g., /create_new_table) to generate content quickly.',
   'Added dynamic, structured tables with templates for Watching Lists, Financial tracking, Data Management, and Book Lists.',
   'Added a real-time table customizer to rename columns, change data types (Text, Number, Date, Select), manage dropdown options, and delete tables.',
-  'Enabled automatic cloud and local syncing for all personal tables.'
+  'Enabled automatic cloud and local syncing for all personal tables.',
+  'image link now auto convert to png anddisplay beside name in the table'
  ]},
   {version:'1.1',date:'October 17, 2026',items:[
  'Added a daily mood check-in with illustrated faces and mood markers in the monthly calendar.',
@@ -780,18 +781,36 @@ function renderPersonalTables() {
       html += `<tr>`;
       table.columns.forEach((col, cIdx) => {
         let val = row[col.name] || '';
+        let cellInner = '';
+
+        // Build the input element
         if (col.type === 'select') {
-          html += `<td><select onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)">
+          cellInner = `<select onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)">
             <option value=""></option>
-            ${col.options.map(opt => `<option value="${escape(opt)}" ${val === opt ? 'selected' : ''}>${escape(opt)}</option>`).join('')}
-          </select></td>`;
+            ${col.options ? col.options.map(opt => `<option value="${escape(opt)}" ${val === opt ? 'selected' : ''}>${escape(opt)}</option>`).join('') : ''}
+          </select>`;
         } else if (col.type === 'number') {
-          html += `<td><input type="number" value="${val}" onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" /></td>`;
+          cellInner = `<input type="number" value="${val}" onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" />`;
           if (col.isFinancial) totalCalc += Number(val) || 0;
         } else if (col.type === 'date') {
-          html += `<td><input type="date" value="${val}" onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" /></td>`;
+          cellInner = `<input type="date" value="${val}" onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" />`;
         } else {
-          html += `<td><input type="text" placeholder="${col.placeholder || ''}" value="${escape(val)}" onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" /></td>`;
+          cellInner = `<textarea rows="1" placeholder="${col.placeholder || ''}" 
+            onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" 
+            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'">${escape(val)}</textarea>`;
+        }
+
+        // Check for an image link on the first column
+        let imageHtml = '';
+        if (cIdx === 0 && row['Image Link'] && String(row['Image Link']).match(/^https?:\/\//)) {
+          imageHtml = `<img src="${escape(row['Image Link'])}" class="row-thumbnail" alt="" onerror="this.style.display='none'" />`;
+        }
+
+        // Wrap in a flex container if an image exists
+        if (imageHtml) {
+          html += `<td><div class="cell-with-image">${imageHtml}${cellInner}</div></td>`;
+        } else {
+          html += `<td>${cellInner}</td>`;
         }
       });
       html += `</tr>`;
@@ -810,6 +829,14 @@ function renderPersonalTables() {
     </div>`;
     return html;
   }).join('');
+
+  // Automatically adjust the height of all textareas to fit existing content on load
+  setTimeout(() => {
+    container.querySelectorAll('textarea').forEach(ta => {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    });
+  }, 0);
 }
 
 // Global functions for inline HTML handlers
@@ -883,7 +910,7 @@ window.renderCustomizer = function(tableId) {
     return html;
   }).join('');
 
-  content.innerHTML += `<button class="primary-btn mt-3" style="background: #ef4444; border-color: #dc2626; color: white;" onclick="deleteTable('${table.id}')">Delete Entire Table</button>`;
+  content.innerHTML += `<button class="primary-btn mt-3" style="background: #865454; border-color: #865454; color: white;" onclick="deleteTable('${table.id}')">Delete Entire Table</button>`;
 };
 
 // New function to handle column type changes

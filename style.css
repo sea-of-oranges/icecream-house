@@ -3572,8 +3572,7 @@ body.parallax-off .parallax {
   text-transform: uppercase;
 }
 
-.custom-table td input,
-.custom-table td select {
+.custom-table td input {
   width: 100%;
   background: transparent;
   border: 1px solid transparent;
@@ -3584,12 +3583,42 @@ body.parallax-off .parallax {
   border-radius: 6px;
 }
 
+.custom-table td select {
+  width: 100%;
+  min-width: max-content; /* Forces the column to expand to fit the longest option */
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: inherit;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.custom-table td textarea {
+  width: 100%;
+  min-width: 140px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: inherit;
+  padding: 6px 8px;
+  border-radius: 6px;
+  resize: none; /* Handled by auto-expand JS */
+  overflow-y: hidden;
+  line-height: 1.5;
+  display: block;
+}
+
 .custom-table td input:focus,
-.custom-table td select:focus {
+.custom-table td select:focus,
+.custom-table td textarea:focus {
   border-color: var(--accent);
   background: var(--input-bg);
   outline: none;
 }
+
 
 .table-total-row {
   background: var(--accent-soft);
@@ -3623,4 +3652,19 @@ body.parallax-off .parallax {
   .personal-layout {
     grid-template-columns: 1fr;
   }
+}
+.cell-with-image {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.row-thumbnail {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--panel-border);
+  background: var(--input-bg);
 }
