@@ -341,7 +341,42 @@ function renderSchool(){
  nextRefresh.setHours(24,0,0,0);
  hdsbCalendarRefreshTimer=setTimeout(renderSchool,Math.max(1,nextRefresh.getTime()-Date.now()));
 }
-function renderMonth(){const y=viewDate.getFullYear(),m=viewDate.getMonth(),start=(new Date(y,m,1).getDay()+6)%7; $('monthLabel').textContent=viewDate.toLocaleDateString([],{month:'long',year:'numeric'});$('monthGrid').innerHTML=Array.from({length:42},(_,i)=>{const d=new Date(y,m,i-start+1),k=d.toISOString().slice(0,10),out=d.getMonth()!==m,tasks=[...getDailyTaskItems(k),...hdsbEventsOnDate(k)],mood=moodChoices.find(([id])=>id===get(`mood:${k}`));return `<button class="calendar-day ${out?'muted':''} ${k===selectedDate?'selected':''}" data-date="${k}" aria-label="${d.toLocaleDateString([],{month:'long',day:'numeric'})}${mood?`, mood: ${mood[1]}`:''}"><span class="day-top"><span class="day-number">${d.getDate()}</span>${mood?`<img class="day-mood" src="${mood[2]}" alt="" title="${mood[1]}" />`:''}</span><span class="day-events">${tasks.map(task=>eventTag(task.label,task.category||'Holiday')).join('')}</span></button>`}).join('');document.querySelectorAll('.calendar-day:not(.muted)').forEach(b=>b.onclick=()=>selectDate(b.dataset.date));}
+function renderMonth() {
+  const y = viewDate.getFullYear();
+  const m = viewDate.getMonth();
+  const start = (new Date(y, m, 1).getDay() + 6) % 7;
+  
+  $('monthLabel').textContent = viewDate.toLocaleDateString([], { month: 'long', year: 'numeric' });$('monthGrid').innerHTML = Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(y, m, i - start + 1);
+    const k = d.toISOString().slice(0, 10);
+    const out = d.getMonth() !== m;
+    
+    // ONLY pull Calendar events and HDSB events for the dots (ignore daily/upcoming tasks)
+    const calendarEvents = getEvents()
+      .filter(event => eventOccursOnDate(event, k))
+      .map(event => ({
+        label: event.name,
+        category: event.category || 'Personal'
+      }));
+      
+    const tasks = prioritizeExamTasks([...calendarEvents, ...hdsbEventsOnDate(k)]);
+    const mood = moodChoices.find(([id]) => id === get(`mood:${k}`));
+    
+    return `<button class="calendar-day ${out ? 'muted' : ''} ${k === selectedDate ? 'selected' : ''}" data-date="${k}" aria-label="${d.toLocaleDateString([], { month: 'long', day: 'numeric' })}${mood ? `, mood: ${mood[1]}` : ''}">
+      <span class="day-top">
+        <span class="day-number">${d.getDate()}</span>
+        ${mood ? `<img class="day-mood" src="${mood[2]}" alt="" title="${mood[1]}" />` : ''}
+      </span>
+      <span class="day-events">
+        ${tasks.map(task => eventTag(task.label, task.category || 'Holiday')).join('')}
+      </span>
+    </button>`;
+  }).join('');
+  
+  document.querySelectorAll('.calendar-day:not(.muted)').forEach(b => {
+    b.onclick = () => selectDate(b.dataset.date);
+  });
+}
 const displayDate=date=>String(date).replace(/^(\d{4})-(\d{2})-(\d{2})$/,'$1/$2/$3');
 const parseTypedDate=value=>{const match=String(value).trim().match(/^(\d{4})\/(\d{2})\/(\d{2})$/);if(!match)return null;const candidate=`${match[1]}-${match[2]}-${match[3]}`,parsed=dateParts(candidate);return parsed.toISOString().slice(0,10)===candidate?candidate:null;};
 function selectDate(date){selectedDate=date||selectedDate;dailyDateDisplay.value=displayDate(selectedDate);$('dailyDateLabel').textContent=selectedDate===localToday()?'Today':new Date(`${selectedDate}T12:00`).toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});renderTasks('daily');document.querySelectorAll('.calendar-day').forEach(b=>b.classList.toggle('selected',b.dataset.date===selectedDate));}
@@ -782,13 +817,27 @@ function renderPersonalTables() {
         let val = row[col.name] || '';
         let cellInner = '';
 
-        if (col.type === 'select') {
+        // Fixed Image Link Logic: Always render both, toggle visibility, and enforce min-width
+        if (col.name === 'Image Link') {
+          const hasLink = !!val;
+          cellInner = `
+            <button class="soft-btn" type="button" style="font-size: 0.75rem; padding: 4px 8px; width: 100%; white-space: nowrap; min-width: 90px;" 
+                    onclick="this.nextElementSibling.hidden = false; this.hidden = true; this.nextElementSibling.focus();"
+                    ${hasLink ? '' : 'hidden'}>
+              Edit Link
+            </button>
+            <input type="text" placeholder="Paste URL..." value="${escape(val)}" 
+              style="min-width: 140px; width: 100%;"
+              ${hasLink ? 'hidden' : ''}
+              onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value); if(this.value) { this.hidden = true; this.previousElementSibling.hidden = false; }" 
+              onblur="if(this.value) { this.hidden = true; this.previousElementSibling.hidden = false; }" />
+          `;
+        } else if (col.type === 'select') {
           cellInner = `<select onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)">
             <option value=""></option>
             ${col.options ? col.options.map(opt => `<option value="${escape(opt)}" ${val === opt ? 'selected' : ''}>${escape(opt)}</option>`).join('') : ''}
           </select>`;
         } else if (col.type === 'multiselect') {
-          // Custom multiselect dropdown
           let selectedVals = typeof val === 'string' && val ? val.split(', ') : (Array.isArray(val) ? val : []);
           let displayTxt = selectedVals.length ? selectedVals.join(', ') : 'Select...';
           
