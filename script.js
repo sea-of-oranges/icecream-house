@@ -98,7 +98,15 @@ const hdsbEventsOnDate=date=>hdsbSecondaryEvents.filter(event=>event.date<=date&
 const categoryPalette={Personal:{bg:'rgba(139,92,246,0.18)',color:'#8b5cf6'},Birthday:{bg:'rgba(244,114,182,0.18)',color:'#ec4899'},'School event':{bg:'rgba(59,130,246,0.18)',color:'#2563eb'},'Club event':{bg:'rgba(16,185,129,0.18)',color:'#10b981'},Health:{bg:'rgba(34,197,94,0.18)',color:'#22c55e'},Lessons:{bg:'rgba(250,226,142,0.28)',color:'#b08a16'},Homework:{bg:'rgba(251,191,36,0.18)',color:'#f59e0b'},Study:{bg:'rgba(168,85,247,0.18)',color:'#a855f7'},Social:{bg:'rgba(249,115,22,0.18)',color:'#f97316'},Appointment:{bg:'rgba(239,68,68,0.18)',color:'#ef4444'},Holiday:{bg:'rgba(139,92,246,0.18)',color:'#8b5cf6'},'PA Day':{bg:'rgba(59,130,246,0.18)',color:'#2563eb'},'School holiday':{bg:'rgba(239,68,68,0.18)',color:'#ef4444'},Secondary:{bg:'rgba(16,185,129,0.18)',color:'#10b981'}};
   categoryPalette['Exams/tests']={bg:'rgba(222,158,55,0.2)',color:'#c88322'};
 const escape=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
-const siteUpdates=[{version:'1.1',date:'October 17, 2026',items:[
+const siteUpdates=[
+  {version:'1.2',date:'October 21, 2026',items:[
+  'Added a new "Personal" workspace to organize custom lists and trackers.',
+  'Introduced a command-based typing bar (e.g., /create_new_table) to generate content quickly.',
+  'Added dynamic, structured tables with templates for Watching Lists, Financial tracking, Data Management, and Book Lists.',
+  'Added a real-time table customizer to rename columns, change data types (Text, Number, Date, Select), manage dropdown options, and delete tables.',
+  'Enabled automatic cloud and local syncing for all personal tables.'
+ ]},
+  {version:'1.1',date:'October 17, 2026',items:[
  'Added a daily mood check-in with illustrated faces and mood markers in the monthly calendar.',
  'Added a Songs player for the supplied audio files, with a playlist and playback controls.',
  'Added a full-width white noise player to Home.',
@@ -112,7 +120,7 @@ const siteUpdates=[{version:'1.1',date:'October 17, 2026',items:[
  'Opened Quick Note and the Pomodoro timer as separate screens with a Back home option.',
  'Added an Updates panel for website changes and fixes.'
 ]}];
-function renderUpdates(){
+ function renderUpdates(){
  $('updatesContent').innerHTML=siteUpdates.map(update=>`<article class="update-entry"><div class="update-entry-heading"><strong>Version ${escape(update.version)}</strong><time>${escape(update.date)}</time></div><ul>${update.items.map(item=>`<li>${escape(item)}</li>`).join('')}</ul></article>`).join('');
 }
 function setUpdatesOpen(open,restoreFocus=false){

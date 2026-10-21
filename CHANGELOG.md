@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 1.2 — October 21, 2026
+
+- Added a new "Personal" workspace to organize custom lists and trackers.
+- Introduced a command-based typing bar (e.g., `/create_new_table`) to generate content quickly.
+- Added dynamic, structured tables with templates for Watching Lists, Financial tracking, Data Management, and Book Lists.
+- Added a real-time table customizer to rename columns, change data types (Text, Number, Date, Select), manage dropdown options, and delete tables.
+- Enabled automatic cloud and local syncing for all personal tables.
+
 ## Version 1.1 — October 17, 2026
 
 - Added the daily mood picker using the supplied illustrated faces; selected moods also appear in the monthly calendar.
