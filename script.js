@@ -100,12 +100,14 @@ const categoryPalette={Personal:{bg:'rgba(139,92,246,0.18)',color:'#8b5cf6'},Bir
 const escape=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
 const siteUpdates=[
   {version:'1.2',date:'October 21, 2026',items:[
-  'Added a new "Personal" workspace to organize custom lists and trackers.',
-  'Introduced a command-based typing bar (e.g., /create_new_table) to generate content quickly.',
+  'Added a new "Personal" workspace to organize custom lists and trackers',
+  'Introduced a command-based typing bar (e.g., `/create_new_table`) to generate content quickly.',
   'Added dynamic, structured tables with templates for Watching Lists, Financial tracking, Data Management, and Book Lists.',
-  'Added a real-time table customizer to rename columns, change data types (Text, Number, Date, Select), manage dropdown options, and delete tables.',
-  'Enabled automatic cloud and local syncing for all personal tables.',
-  'image link now auto convert to png anddisplay beside name in the table'
+  'Updated Image Links to instantly render image thumbnails inside the table rows, with a clean "Edit Link" toggle.',
+  'Upgraded the "Genre" field to use a custom-built Multi-Select dropdown for Watch/Book lists.',
+  'Fixed the calendar sync logic: tasks added in Daily/Weekly/Upcoming no longer clutter the Monthly calendar dots, but Monthly events still sync down into Daily tasks.',
+  'Added a real-time table customizer to rename columns, change data types (Text, Number, Date, Select, Multi-Select), manage dropdown options, and delete tables.',
+  'Enabled automatic cloud and local syncing for all personal tables.'
  ]},
   {version:'1.1',date:'October 17, 2026',items:[
  'Added a daily mood check-in with illustrated faces and mood markers in the monthly calendar.',
@@ -775,6 +777,15 @@ function setupPersonalSpace() {
     renderPersonalTables();
     renderCustomizer(activeTableId);
   };
+
+  // Close Customizer Panel
+  const closeCustomizerBtn = $('closeCustomizerBtn');
+  if (closeCustomizerBtn) {
+    closeCustomizerBtn.onclick = () => {
+      $('tableCustomizer').hidden = true;
+      activeTableId = null; // Clears the active selection
+    };
+  }
 }
 
 function savePersonalTables() {
@@ -800,7 +811,7 @@ function renderPersonalTables() {
   const container = $('personalTablesContainer');
   container.innerHTML = personalTables.map(table => {
     let html = `<div class="personal-table-block" data-table-id="${table.id}">
-      <h3 style="margin-bottom: 12px; cursor: pointer;" onclick="renderCustomizer('${table.id}')">${escape(table.title)} <span>⚙️</span></h3>
+      <h3 style="margin-bottom: 12px; cursor: pointer;" onclick="renderCustomizer('${table.id}')">${escape(table.title)} <span>🔧</span></h3>
       <div class="custom-table-wrapper">
         <table class="custom-table">
           <thead><tr>`;
@@ -1026,7 +1037,7 @@ window.renderCustomizer = function(tableId) {
     return html;
   }).join('');
 
-  content.innerHTML += `<button class="primary-btn mt-3" style="background: #ef4444; border-color: #dc2626; color: white;" onclick="deleteTable('${table.id}')">Delete Entire Table</button>`;
+  content.innerHTML += `<button class="primary-btn mt-3" style="background: #965353; border-color: #965353; color: white;" onclick="deleteTable('${table.id}')">Delete Entire Table</button>`;
 };
 
 window.changeTableColumnType = function(tableId, colIdx, newType) {

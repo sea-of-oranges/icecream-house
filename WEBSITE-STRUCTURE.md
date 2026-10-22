@@ -12,7 +12,6 @@ Website(Icecream house)/
 ├── supabase-config.js     # Optional Supabase connection settings
 ├── CHANGELOG.md           # User-facing website update history
 └── WEBSITE-STRUCTURE.md   # This architecture and page guide
-```
 
 ## Application shell
 
@@ -68,8 +67,13 @@ Each tool opens as a standalone screen within the app shell, rather than as a se
 - Grade progress can be filtered by one, multiple, or all courses. Assessments can be edited or deleted from the history table.
 - Restarting course selection requires confirmation and preserves existing grades and notes.
 
-## JavaScript responsibilities
+###Personal
+- Command-Based Typing Bar: A hidden-by-default input bar that supports commands (e.g., /create_new_table) to rapidly generate structured content.
+- Dynamic Tables: Generates specialized tables from templates (Watching List, Financial, Data Management, Book List, Custom).
+- Interactive UI Elements: Features built-in financial total calculations, auto-expanding text areas, custom multi-select dropdowns, and instant inline image previews for URLs.
+- Table Customizer: A slide-out settings panel to rename columns, change data types (Text, Number, Date, Select, Multi-Select), define custom dropdown options, add new columns, and delete tables.
 
+## JavaScript responsibilities
 `script.js` is a plain browser script. Its main responsibilities include:
 
 - Reading and writing account-scoped browser storage.
@@ -89,5 +93,4 @@ The app uses local storage for its core data. Supabase support is optional and c
 ## Styling and external services
 
 `style.css` contains shared components, color themes, page layouts, and responsive breakpoints. It includes wide-landscape rules for the Home dashboard and mobile rules for the top bar, compact sidebar, and Study gradebook.
-
 The page also loads Google Fonts, the Supabase JavaScript client, and weather information from Open-Meteo. The HDSB source PDF is linked from the school-calendar widget.

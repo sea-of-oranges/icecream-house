@@ -5,7 +5,10 @@
 - Added a new "Personal" workspace to organize custom lists and trackers.
 - Introduced a command-based typing bar (e.g., `/create_new_table`) to generate content quickly.
 - Added dynamic, structured tables with templates for Watching Lists, Financial tracking, Data Management, and Book Lists.
-- Added a real-time table customizer to rename columns, change data types (Text, Number, Date, Select), manage dropdown options, and delete tables.
+- Updated Image Links to instantly render image thumbnails inside the table rows, with a clean "Edit Link" toggle.
+- Upgraded the "Genre" field to use a custom-built Multi-Select dropdown for Watch/Book lists.
+- Fixed the calendar sync logic: tasks added in Daily/Weekly/Upcoming no longer clutter the Monthly calendar dots, but Monthly events still sync down into Daily tasks.
+- Added a real-time table customizer to rename columns, change data types (Text, Number, Date, Select, Multi-Select), manage dropdown options, and delete tables.
 - Enabled automatic cloud and local syncing for all personal tables.
 
 ## Version 1.1 — October 17, 2026

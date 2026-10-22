@@ -65,7 +65,10 @@
                     </div>
                     
                     <aside class="personal-sidebar glass-panel" id="tableCustomizer" hidden>
-                      <h3>Customize Table</h3>
+                      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <h3>Customize Table</h3>
+                        <button id="closeCustomizerBtn" class="delete-task" aria-label="Close customizer" style="font-size: 1.5rem; margin-top: -4px;">×</button>
+                      </div>
                       <p class="eyebrow">Active: <span id="activeTableName">None</span></p>
                       <div id="customizerContent"></div>
                       <button id="addColumnBtn" class="secondary-btn mt-3">+ Add Column</button>
