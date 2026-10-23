@@ -3598,6 +3598,7 @@ body.parallax-off .parallax {
 .custom-table td textarea {
   width: 100%;
   min-width: 140px;
+  min-height: 38px;
   background: transparent;
   border: 1px solid transparent;
   color: var(--text);
