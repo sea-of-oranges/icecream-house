@@ -998,22 +998,33 @@ window.renderCustomizer = function(tableId) {
   }
   
   customizer.hidden = false;
-  $('activeTableName').textContent = table.title;
+  $('activeTableName').textContent = "Settings";
   
-  content.innerHTML = table.columns.map((col, idx) => {
+  // Add Table Name editor at the top
+  let html = `
+    <div style="margin-bottom: 20px;">
+      <label style="font-size: 0.75rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Table Name</label>
+      <input type="text" value="${escape(table.title)}" 
+        style="width: 100%; background: var(--control-bg); border: 1px solid var(--panel-border); color: var(--text); padding: 8px 12px; border-radius: 8px; margin-top: 6px; font-weight: 700;"
+        onchange="renameTable('${table.id}', this.value)" />
+    </div>
+    <div style="font-size: 0.75rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Columns</div>
+  `;
+  
+  html += table.columns.map((col, idx) => {
     const isPrimary = idx === 0; 
     
-    let html = `
+    let colHtml = `
       <div class="customizer-item" style="display: flex; flex-direction: column; align-items: flex-start; gap: 8px;">
         <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
           <input type="text" value="${escape(col.name)}" 
             style="background: transparent; border: 1px solid transparent; color: var(--text); width: 60%; font-weight: 800;"
             onchange="renameTableColumn('${table.id}', ${idx}, this.value)" />
-          ${!isPrimary ? `<button class="delete-task" onclick="removeTableColumn('${table.id}',${idx})" title="Remove Column">×</button>` : ''}
+          ${!isPrimary ? `<button class="delete-task" onclick="removeTableColumn('${table.id}', ${idx})" title="Remove Column">×</button>` : ''}
         </div>`;
     
     if (!isPrimary) {
-      html += `
+      colHtml += `
         <div style="display: flex; gap: 8px; width: 100%;">
           <select style="background: var(--control-bg); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px; padding: 4px 6px; width: 35%; font-size: 0.75rem;"
                   onchange="changeTableColumnType('${table.id}', ${idx}, this.value)">
@@ -1026,18 +1037,33 @@ window.renderCustomizer = function(tableId) {
       
       if (col.type === 'select' || col.type === 'multiselect') {
         const opts = col.options ? col.options.join(', ') : '';
-        html += `<input type="text" placeholder="Options (comma separated)" value="${escape(opts)}"
+        colHtml += `<input type="text" placeholder="Options (comma separated)" value="${escape(opts)}"
                   style="flex: 1; min-width: 0; background: var(--control-bg); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px; padding: 4px 8px; font-size: 0.75rem;"
                   onchange="updateTableColumnOptions('${table.id}', ${idx}, this.value)" />`;
       }
-      html += `</div>`;
+      colHtml += `</div>`;
     }
     
-    html += `</div>`;
-    return html;
+    colHtml += `</div>`;
+    return colHtml;
   }).join('');
 
-  content.innerHTML += `<button class="primary-btn mt-3" style="background: #965353; border-color: #965353; color: white;" onclick="deleteTable('${table.id}')">Delete Entire Table</button>`;
+  content.innerHTML = html + `<button class="primary-btn mt-3" style="background: #834b4b; border-color: #834b4b; color: white;" onclick="deleteTable('${table.id}')">Delete Entire Table</button>`;
+};
+
+// New function to handle renaming the table
+window.renameTable = function(tableId, newTitle) {
+  const table = personalTables.find(t => t.id === tableId);
+  if(table && newTitle.trim()) {
+    table.title = newTitle.trim();
+    savePersonalTables();
+    renderPersonalTables();
+    // Update the customizer title if it is still open
+    if (activeTableId === tableId) {
+      const activeNameLabel = $('activeTableName');
+      if (activeNameLabel) activeNameLabel.textContent = "Settings";
+    }
+  }
 };
 
 window.changeTableColumnType = function(tableId, colIdx, newType) {
@@ -1143,7 +1169,7 @@ $('upcomingForm').onsubmit=e=>{e.preventDefault();const title=$('upcomingTitle')
 setupEventControls();
 $('eventForm').onsubmit=e=>{e.preventDefault();const repeatEnabled=$('eventRepeatEnabled').checked,repeat=repeatEnabled?$('eventRepeat').value:'none',events=getEvents();events.push({id:`event-${Date.now()}`,date:$('eventDate').value,name:$('eventTitle').value,category:$('eventCategory').value,repeat,repeatEnabled,repeatCount:Math.max(1,Number($('eventRepeatCount').value)||1),repeatInfinite:$('eventRepeatInfinite').checked,repeatInterval:Math.max(1,Number($('eventRepeatInterval').value)||1),repeatUnit:$('eventRepeatUnit').value,done:false,deletedDates:[]});save('events',JSON.stringify(events));e.target.reset();$('repeatOptions').hidden=true;$('eventRepeatCount').disabled=false;renderMonth();renderTasks('daily');};$('eventFullDay').onchange=e=>$('timeFields').hidden=e.target.checked;
 $('setClockButton').onclick=()=>{customClock=$('customTime').value;save('clockTime',customClock);updateClock();};$('resetClockButton').onclick=()=>{customClock=null;localStorage.removeItem(key('clockTime'));updateClock();};$('clockFormat').onchange=()=>{save('clockFormat',$('clockFormat').value);updateClock();};
-$('applyBackgroundUrl').onclick=()=>{let u=$('backgroundUrl').value.trim();try{new URL(u);root.style.setProperty('--custom-bg-image',`url("${u}")`);save('background',u);$('backgroundMessage').textContent='Background saved.';}catch{$('backgroundMessage').textContent='Enter a valid image URL.';}};$('backgroundFile').onchange=e=>{let r=new FileReader();r.onload=()=>{root.style.setProperty('--custom-bg-image',`url("${r.result}")`);save('background',r.result);};r.readAsDataURL(e.target.files[0]);};$('clearBackground').onclick=()=>{root.style.setProperty('--custom-bg-image','none');localStorage.removeItem(key('background'));queueCloudSync();};
+$('applyBackgroundUrl').onclick=()=>{let u=$('backgroundUrl').value.trim();try{new URL(u);root.style.setProperty('--custom-bg-image',`url("${u}")`);save('background',u);$('backgroundMessage').textContent='Background saved.';}catch{$('backgroundMessage').textContent='Enter a valid image URL.';}};$('backgroundFile').onchange=e=>{let r=new FileReader();r.onload=()=>{root.style.setProperty('--custom-bg-image',`url("${r.result}")`);save('background',r.result);};r.readAsDataURL(e.target.files[0]);};$('clearBackground').onclick=()=>{root.style.setProperty('--custom-bg-image','none');localStorage.removeItem(key('background'));save('background', 'cleared');};
 $('startTimer').onclick=()=>{if(timerInterval){clearInterval(timerInterval);timerInterval=null;$('startTimer').textContent='Start';return;}timerSeconds=Math.max(1,Number($('customMinutes').value)||25)*60;$('startTimer').textContent='Pause';timerInterval=setInterval(()=>{timerSeconds--;let m=String(Math.floor(timerSeconds/60)).padStart(2,'0'),s=String(timerSeconds%60).padStart(2,'0');$('timerDisplay').textContent=`${m}:${s}`;if(timerSeconds<=0){clearInterval(timerInterval);timerInterval=null;$('startTimer').textContent='Start';$('timerMessage').textContent='Focus sprint complete.';}},1000);};$('resetTimer').onclick=()=>{$('timerDisplay').textContent=`${String(Number($('customMinutes').value)||25).padStart(2,'0')}:00`;};document.querySelectorAll('.timer-preset').forEach(b=>b.onclick=()=>{$('customMinutes').value=b.dataset.minutes;$('timerDisplay').textContent=`${b.dataset.minutes}:00`;});
 $('saveNote').onclick=()=>{save('quickNote',$('quickNoteInput').value);$('noteSavedStatus').textContent='Saved just now';};
 function authMode(create){$('signInTab').classList.toggle('active',!create);$('createTab').classList.toggle('active',create);hintField.hidden=!create;authSubmit.textContent=create?'Create account':'Sign in';} $('signInTab').onclick=()=>authMode(false);$('createTab').onclick=()=>authMode(true);authForm.onsubmit=async e=>{
