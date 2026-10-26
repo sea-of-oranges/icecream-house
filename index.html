@@ -82,19 +82,50 @@
                    <form id="studyCourseForm"><datalist id="studyCourseOptions"></datalist><div class="study-course-picker-list" id="studyCoursePickerList"></div><div class="study-setup-actions"><button class="secondary-btn" id="addStudyCourse" type="button">+ Add another course</button><button class="primary-btn" type="submit">Done</button></div><p class="form-message" id="studySetupMessage" role="status"></p></form>
                  </div>
                  <div class="study-app glass-panel" id="studyAppScreen" hidden>
-                   <nav class="study-subnav" aria-label="Study sections"><button class="study-restart" id="studyRestart" type="button" aria-label="Restart course selection" title="Restart course selection">↶</button><div class="study-course-tabs" id="studyCourseTabs" role="tablist" aria-label="Courses"></div><button class="study-tab grades-tab" id="studyGradesTab" type="button" role="tab">Grades</button></nav>
-                   <div class="study-course-page" id="studyCoursePage"></div>
-                   <section class="study-grades-page" id="studyGradesPage" hidden>
-                     <div class="study-page-heading"><div><p class="eyebrow">Track your progress</p><h1>Gradebook</h1><p class="study-intro">Add assessments, set category weights, and compare your estimated grades.</p></div><span class="pill" id="overallGradeSummary">No grades yet</span></div>
-                     <div class="study-grade-layout">
-                       <section class="study-panel glass-panel"><div class="study-panel-heading"><div><p class="eyebrow">Estimate settings</p><h2>Assessment weights</h2></div></div><label class="study-field">Course<select id="gradeWeightCourse"></select></label><p class="study-help">Weights apply to each category. Categories with no marks yet are left out of the estimate; if all weights are equal, the available category averages count equally.</p><div class="study-weight-grid" id="studyWeightGrid"></div></section>
-                       <section class="study-panel glass-panel"><div class="study-panel-heading"><div><p class="eyebrow">Keep a record</p><h2>Add an assessment</h2></div></div><form id="studyAssessmentForm" class="study-assessment-form"><label class="study-field">Course<select id="assessmentCourse" required></select></label><label class="study-field">Assessment name<input id="assessmentName" required maxlength="80" placeholder="e.g. Chapter 3 test" /></label><label class="study-field">Type<select id="assessmentType" required><option>Exam/Test</option><option>Quiz</option><option>Assignment</option></select></label><label class="study-field">Date<input id="assessmentDate" type="date" required /></label><label class="study-field">Mark earned<input id="assessmentScore" type="number" min="0" step="any" required placeholder="e.g. 42" /></label><label class="study-field">Out of<input id="assessmentOutOf" type="number" min="0.01" step="any" required placeholder="e.g. 50" /></label><button class="primary-btn study-save-assessment" type="submit">Add assessment</button><p class="form-message study-save-message" id="studyAssessmentMessage" role="status"></p></form></section>
-                     </div>
-                     <section class="study-panel study-chart-panel glass-panel"><div class="study-panel-heading"><div><p class="eyebrow">Compare courses</p><h2>Grade progress</h2></div><div class="study-chart-actions"><button class="soft-btn" id="selectAllStudyCourses" type="button">All</button><button class="soft-btn" id="clearStudyCourses" type="button">Clear</button></div></div><div class="study-chart-filters" id="studyChartFilters"></div><div class="study-chart-scroll"><svg id="studyGradeChart" class="study-grade-chart" viewBox="0 0 760 320" role="img" aria-label="Estimated grade progress by assessment"></svg></div><p class="study-chart-caption">Each point shows an assessment mark percentage, in date order for that course. Final estimates use your selected category weights.</p></section>
-                     <section class="study-panel study-records-panel glass-panel"><div class="study-panel-heading"><div><p class="eyebrow">Assessment history</p><h2>Marks</h2></div><label class="study-inline-filter">Course<select id="assessmentListCourse"></select></label></div><div class="study-records-table-wrap"><table class="study-records-table"><thead><tr><th>Assessment</th><th>Type</th><th>Date</th><th>Mark</th><th>Percent</th><th>Actions</th></tr></thead><tbody id="studyAssessmentRows"></tbody></table><p class="empty-state" id="studyNoAssessments">No assessments for this course yet.</p></div></section>
-                   </section>
-                 </div>
-               </section>
+                  <nav class="study-subnav" aria-label="Study sections"><button class="study-restart" id="studyRestart" type="button" aria-label="Restart course selection" title="Restart course selection">↶</button><div class="study-course-tabs" id="studyCourseTabs" role="tablist" aria-label="Courses"></div><button class="study-tab grades-tab" id="studyGradesTab" type="button" role="tab">Grades</button></nav>
+                  <div class="study-course-page" id="studyCoursePage"></div>
+                  <section class="study-grades-page" id="studyGradesPage" hidden>
+                    <div class="study-page-heading"><div><p class="eyebrow">Track your progress</p><h1>Gradebook</h1><p class="study-intro">Add assessments, set category weights, and compare your estimated grades.</p></div><span class="pill" id="overallGradeSummary">No grades yet</span></div>
+                    <div class="study-grade-layout">
+                      <section class="study-panel glass-panel">
+                        <div class="study-panel-heading">
+                          <div><p class="eyebrow">Estimate settings</p><h2>Assessment weights</h2></div>
+                        </div>
+                        <label class="study-field">Course<select id="gradeWeightCourse"></select></label>
+                        <p class="study-help">Weights apply to each category. Categories with no marks yet are left out of the estimate; if all weights are equal, the available category averages count equally.</p>
+                        <div class="study-weight-grid" id="studyWeightGrid"></div>
+                        <button id="confirmWeightsBtn" class="primary-btn" style="width: 100%; margin-top: 16px;">Confirm Weights</button>
+                        <p class="form-message" id="weightMessage" style="margin-top: 8px; text-align: center;"></p>
+                      </section>
+                      <section class="study-panel glass-panel">
+                        <div class="study-panel-heading"><div><p class="eyebrow">Keep a record</p><h2>Add an assessment</h2></div></div>
+                        <form id="studyAssessmentForm" class="study-assessment-form">
+                          <label class="study-field">Course<select id="assessmentCourse" required></select></label>
+                          <label class="study-field">Assessment name<input id="assessmentName" required maxlength="80" placeholder="e.g. Chapter 3 test" /></label>
+                          <label class="study-field">Type
+                            <select id="assessmentType" required>
+                              <option>Exam/Test</option>
+                              <option>Quiz</option>
+                              <option>Assignment</option>
+                              <option>FPT</option>
+                              <option>Final Exam</option>
+                              <option>Participation</option>
+                            </select>
+                          </label>
+                          <label class="study-field">Date<input id="assessmentDate" type="date" required /></label>
+                          <label class="study-field">Mark earned<input id="assessmentScore" type="number" min="0" step="any" required placeholder="e.g. 42" /></label>
+                          <label class="study-field">Out of<input id="assessmentOutOf" type="number" min="0.01" step="any" required placeholder="e.g. 50" /></label>
+                          <label class="study-field">Weight (%)<input id="assessmentWeight" type="number" min="0" step="any" placeholder="e.g. 5 (Optional)" /></label>
+                          <button class="primary-btn study-save-assessment" type="submit">Add assessment</button>
+                          <p class="form-message study-save-message" id="studyAssessmentMessage" role="status"></p>
+                        </form>
+                      </section>
+                    </div>
+                    <section class="study-panel study-chart-panel glass-panel"><div class="study-panel-heading"><div><p class="eyebrow">Compare courses</p><h2>Grade progress</h2></div><div class="study-chart-actions"><button class="soft-btn" id="selectAllStudyCourses" type="button">All</button><button class="soft-btn" id="clearStudyCourses" type="button">Clear</button></div></div><div class="study-chart-filters" id="studyChartFilters"></div><div class="study-chart-scroll"><svg id="studyGradeChart" class="study-grade-chart" viewBox="0 0 760 320" role="img" aria-label="Estimated grade progress by assessment"></svg></div><p class="study-chart-caption">Each point shows an assessment mark percentage, in date order for that course. Final estimates use your selected category weights.</p></section>
+                    <section class="study-panel study-records-panel glass-panel"><div class="study-panel-heading"><div><p class="eyebrow">Assessment history</p><h2>Marks</h2></div><label class="study-inline-filter">Course<select id="assessmentListCourse"></select></label></div><div class="study-records-table-wrap"><table class="study-records-table"><thead><tr><th>Assessment</th><th>Type</th><th>Date</th><th>Weight</th><th>Mark</th><th>Percent</th><th>Actions</th></tr></thead><tbody id="studyAssessmentRows"></tbody></table><p class="empty-state" id="studyNoAssessments">No assessments for this course yet.</p></div></section>
+                  </section>
+                </div>
+                </section> 
                <section class="content-section appearance-section"><div class="home-appearance-controls"><div><p class="eyebrow">Theme color</p><div class="accent-picker"><button class="swatch" data-accent="purple" aria-label="Purple theme"></button><button class="swatch" data-accent="sage" aria-label="Sage theme"></button><button class="swatch" data-accent="blue" aria-label="Blue theme"></button><button class="swatch" data-accent="classic" aria-label="Classic theme"></button></div></div><button class="mode-toggle" id="modeToggle" type="button">Night</button></div></section>
                <section class="content-section songs-section" id="songs"><div class="section-heading"><p class="eyebrow">Your little soundtrack</p><h2>Songs</h2><p class="section-subtitle">Pick a song from your collection and listen while you unwind or focus.</p></div><div class="songs-player glass-panel"><div class="song-now-playing"><div class="song-cover" aria-hidden="true">♫</div><p class="eyebrow">Now playing</p><p class="song-artist" id="songArtist"></p><h3 class="song-title" id="songTitle">Choose a song</h3><audio id="songAudio" controls preload="metadata" aria-label="Song playback controls"></audio><div class="song-navigation"><button class="soft-btn" id="previousSong" type="button">← Previous</button><button class="soft-btn" id="nextSong" type="button">Next →</button></div><p class="song-status" id="songStatus" role="status" aria-live="polite">Choose a song from your playlist.</p></div><div class="song-list-panel"><div class="song-list-heading"><h3>Playlist</h3><span class="pill" id="songCount"></span></div><div class="song-playlist" id="songPlaylist" aria-label="Song playlist"></div></div></div></section>
                <section class="content-section white-noise-section"><div class="section-heading"><p class="eyebrow">A calmer moment</p><h2>White noise</h2><p class="section-subtitle">Choose a soothing sound for focus, rest, or a little quiet space.</p></div><div class="white-noise-player glass-panel"><iframe src="https://www.ppbzy.com/embed?theme=light" title="White noise player with selectable sounds" width="420" height="200" frameborder="0" allow="autoplay"></iframe><a class="white-noise-link" href="https://www.ppbzy.com/embed?theme=light" target="_blank" rel="noopener noreferrer">Open the sound player in a new tab ↗</a></div></section>

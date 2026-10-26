@@ -1,5 +1,23 @@
 # Changelog
 
+## Version 1.3 — October 25, 2026
+
+Study Workspace & Gradebook Overhaul
+- Grouped assessment types in the general weight settings into four main categories: FPT, Final Exam, Participation, and Other (Quiz, Test, Assignment).
+- Added the ability to assign custom percentage weights to individual assessments.
+- Added a "Confirm Weights" button to the gradebook settings to safely auto-balance remaining category weights to 100%.
+- The assessment history table now calculates and displays the real-time effective weight of every item (using `~` to indicate auto-distributed weights).
+- Added smart weight rollover: if a category (e.g., Final Exam) has no marks yet, its weight is automatically and proportionally distributed to active categories, complete with a dynamic explanatory message.
+
+Personal Workspace Enhancements
+- Added a "Close" button to the table customizer and the ability to rename tables.
+- Improved the "Image Link" column to hide long URLs behind a clean "Edit Link" toggle button.
+- Fixed layout bugs causing the custom multi-select dropdowns to be clipped and textareas to collapse on page refresh.
+
+System Fixes
+- Fixed the monthly calendar so daily/upcoming tasks no longer clutter the calendar view, while official events correctly sync to daily tasks.
+- Fixed a cloud sync bug where clearing the custom background or resetting the clock failed to update across devices.
+
 ## Version 1.2 — October 21, 2026
 
 - Added a new "Personal" workspace to organize custom lists and trackers.

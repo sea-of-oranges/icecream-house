@@ -99,6 +99,18 @@ const categoryPalette={Personal:{bg:'rgba(139,92,246,0.18)',color:'#8b5cf6'},Bir
   categoryPalette['Exams/tests']={bg:'rgba(222,158,55,0.2)',color:'#c88322'};
 const escape=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
 const siteUpdates=[
+  {version:'1.3',date:'October 25, 2026',items:[
+  'Study: Grouped assessment weight settings into four categories (FPT, Final Exam, Participation, Other).',
+  'Study: Added individual custom percentage weights to specific assessments.',
+  'Study: Added a "Confirm Weights" button to safely auto-balance general category weights to 100%.',
+  'Study: The assessment history table now displays real-time effective weights (~ for auto-distributed).',
+  'Study: Smart weight rollover automatically distributes the weight of empty categories (like Final Exams) to active categories, with a dynamic explanation.',
+  'Personal: Added a close button to the table customizer and the ability to rename tables.',
+  'Personal: Cleaned up the Image Link column with an "Edit Link" toggle button.',
+  'Fix: Prevented multi-select dropdowns from being clipped and fixed textarea heights collapsing on refresh.',
+  'Fix: Daily/Upcoming tasks no longer clutter the monthly calendar view, while official events properly sync down.',
+  'Fix: Clearing the background or resetting the clock now correctly syncs the deletion to the cloud.'
+ ]},
   {version:'1.2',date:'October 21, 2026',items:[
   'Added a new "Personal" workspace to organize custom lists and trackers',
   'Introduced a command-based typing bar (e.g., `/create_new_table`) to generate content quickly.',
@@ -424,7 +436,14 @@ function showPage(page,addHistory=false){
  window.scrollTo({top:0,behavior:'smooth'});
 }
 const studyCourseCatalog=['Math','English','Science','Geography','History','Food and Nutrition','Health Studies','Business','Chemistry','Biology','Physics','Medical Studies','Manufacturing','Design Technology','Computer Science','Communication Technology','Civics and Career Studies','Art','French','Music','Drama','Vocal','Physical Education','Accounting','Economics','Law','Environmental Science','Robotics','Photography','Dance'];
-const studyAssessmentTypes=['Exam/Test','Quiz','Assignment'];
+const studyAssessmentTypes=['Exam/Test','Quiz','Assignment','FPT','Final Exam','Participation'];
+const studyWeightCategories=['FPT','Final Exam','Participation','Other'];
+
+// Helper to sort assessments into their general category
+function getWeightCategory(type) {
+  if (['FPT', 'Final Exam', 'Participation'].includes(type)) return type;
+  return 'Other'; // Exam/Test, Quiz, and Assignment fall into this
+}
 const studyChartColors=['#a78bfa','#60a5fa','#34d399','#fbbf24','#f472b6','#fb7185','#22d3ee','#c084fc','#a3e635','#f97316'];
 let activeStudyCourse='',studyGradesView=false,studyEditingAssessment='',studySetupActive=false;
 const studyCourseKey=course=>String(course||'').trim().toLocaleLowerCase();
@@ -437,17 +456,85 @@ function renderCoursePicker(values=Array(4).fill('')){
 }
 function assessmentPercent(assessment){const score=Number(assessment.score),outOf=Number(assessment.outOf);return outOf>0?Math.max(0,Math.min(100,score/outOf*100)):0;}
 function courseGrade(course,gradebook=getStudyGradebook()){
- const assessments=gradebook.assessments.filter(item=>studyCourseKey(item.course)===studyCourseKey(course));
+ const courseKey = studyCourseKey(course);
+ const assessments = gradebook.assessments.filter(item=>studyCourseKey(item.course)===courseKey);
  if(!assessments.length)return null;
- const stored=gradebook.weights[studyCourseKey(course)]||{};
- const available=studyAssessmentTypes.map(type=>{
-   const marks=assessments.filter(item=>item.type===type);
-   return marks.length?{type,average:marks.reduce((sum,item)=>sum+assessmentPercent(item),0)/marks.length,weight:Math.max(0,Number(stored[type]??(100/studyAssessmentTypes.length)))}:null;
+ 
+ const { scaledWeights } = getScaledCategoryWeights(courseKey, gradebook);
+ 
+ const available=studyWeightCategories.map(cat=>{
+   const marks=assessments.filter(item=>getWeightCategory(item.type)===cat);
+   if(!marks.length) return null;
+   
+   // Use the dynamically scaled weight instead of the raw general weight
+   const catWeight = scaledWeights[cat] || 0;
+   
+   let customWeightSum = 0;
+   let customScoreSum = 0;
+   let unweightedMarks = [];
+   
+   marks.forEach(item => {
+     if (item.weight !== null && item.weight !== undefined && item.weight !== "") {
+       const w = Number(item.weight);
+       customWeightSum += w;
+       customScoreSum += assessmentPercent(item) * w;
+     } else {
+       unweightedMarks.push(item);
+     }
+   });
+   
+   let remainingCatWeight = Math.max(0, catWeight - customWeightSum);
+   let unweightedScoreSum = 0;
+   
+   if (unweightedMarks.length > 0) {
+     const unweightedAvg = unweightedMarks.reduce((sum, item) => sum + assessmentPercent(item), 0) / unweightedMarks.length;
+     unweightedScoreSum = unweightedAvg * remainingCatWeight;
+   }
+   
+   const effectiveCatWeight = Math.max(catWeight, customWeightSum);
+   const catAverage = effectiveCatWeight > 0 ? (customScoreSum + unweightedScoreSum) / effectiveCatWeight : 0;
+   
+   return {cat, average: catAverage, weight: effectiveCatWeight};
  }).filter(Boolean);
+ 
  const weightTotal=available.reduce((sum,item)=>sum+item.weight,0);
  if(!weightTotal)return null;
  return available.reduce((sum,item)=>sum+item.average*item.weight,0)/weightTotal;
 }
+
+// New helper to calculate auto-scaled weights when some categories are empty
+function getScaledCategoryWeights(courseKey, gradebook) {
+  const stored = gradebook.weights[courseKey] || {};
+  const baseWeights = {};
+  
+  studyWeightCategories.forEach(cat => {
+    baseWeights[cat] = Math.max(0, Number(stored[cat] ?? (100 / studyWeightCategories.length)));
+  });
+
+  const activeCats = new Set();
+  gradebook.assessments.forEach(a => {
+    if (studyCourseKey(a.course) === courseKey) {
+      activeCats.add(getWeightCategory(a.type));
+    }
+  });
+
+  const missingCats = studyWeightCategories.filter(cat => !activeCats.has(cat));
+  const presentCats = studyWeightCategories.filter(cat => activeCats.has(cat));
+
+  let activeBaseSum = 0;
+  presentCats.forEach(cat => { activeBaseSum += baseWeights[cat]; });
+
+  const scaledWeights = {};
+  presentCats.forEach(cat => {
+    // Proportionally scale up the active categories to fill 100%
+    scaledWeights[cat] = activeBaseSum > 0 ? baseWeights[cat] * (100 / activeBaseSum) : 0;
+  });
+  
+  missingCats.forEach(cat => { scaledWeights[cat] = 0; });
+
+  return { scaledWeights, missingCats, presentCats };
+}
+
 const formatGrade=grade=>grade===null?'—':`${grade.toFixed(1)}%`;
 function courseStudyFeatures(course){
  const name=studyCourseKey(course);
@@ -546,14 +633,42 @@ function renderStudyCoursePage(){
  $('studyCoursePage').innerHTML=`<div class="study-page-heading"><div><p class="eyebrow">Your course space</p><h1>${escape(activeStudyCourse)}</h1><p class="study-intro">A focused home for your ${escape(activeStudyCourse)} study materials.</p></div><span class="pill">Estimated grade · ${grade}</span></div><section class="study-notes-panel glass-panel"><label for="studyCourseNotesInput">Course notes</label><p class="study-help">Use this space for your own summaries, examples, and review notes.</p><textarea id="studyCourseNotesInput" class="study-course-notes" data-course-key="${escape(courseKey)}" placeholder="Start collecting notes for ${escape(activeStudyCourse)}...">${escape(notes[courseKey]||'')}</textarea><p class="form-message" id="studyNotesMessage" role="status"></p></section>`;
 }
 function renderStudyWeights(){
- const courses=getStudyCourses(),select=$('gradeWeightCourse'),gradebook=getStudyGradebook();
- if(!courses.length)return;
- const previous=select.value,course=courses.some(item=>studyCourseKey(item)===studyCourseKey(previous))?previous:courses[0];
- select.innerHTML=courses.map(item=>`<option value="${escape(item)}">${escape(item)}</option>`).join('');
- select.value=course;
- const weights=gradebook.weights[studyCourseKey(course)]||{};
- $('studyWeightGrid').innerHTML=studyAssessmentTypes.map(type=>`<label class="study-weight-field">${escape(type)} weight (%)<input type="number" min="0" max="100" step="0.1" data-study-weight="${escape(type)}" value="${Number(weights[type]??(100/studyAssessmentTypes.length)).toFixed(1)}"></label>`).join('');
+  const courses=getStudyCourses(),select=$('gradeWeightCourse'),gradebook=getStudyGradebook();
+  if(!courses.length)return;
+  const previous=select.value,course=courses.some(item=>studyCourseKey(item)===studyCourseKey(previous))?previous:courses[0];
+  select.innerHTML=courses.map(item=>`<option value="${escape(item)}">${escape(item)}</option>`).join('');
+  select.value=course;
+  const courseKey = studyCourseKey(course);
+  const weights=gradebook.weights[courseKey]||{};
+
+  $('studyWeightGrid').innerHTML=studyWeightCategories.map(cat=>{
+    let val = weights[cat] !== undefined ? weights[cat] : (100/studyWeightCategories.length);
+    return `<label class="study-weight-field">${escape(cat)} weight (%)<input type="number" min="0" max="100" step="0.1" data-study-weight="${escape(cat)}" value="${Number(val).toFixed(1)}" oninput="this.dataset.edited='true'"></label>`;
+  }).join('');
+  
+  // Display the rollover message dynamically
+  const { missingCats, presentCats, scaledWeights } = getScaledCategoryWeights(courseKey, gradebook);
+  
+  let msgContainer = $('weightRolloverMessage');
+  if (!msgContainer) {
+    msgContainer = document.createElement('p');
+    msgContainer.id = 'weightRolloverMessage';
+    msgContainer.className = 'study-help';
+    msgContainer.style.color = 'var(--accent)';
+    msgContainer.style.fontWeight = '800';
+    $('studyWeightGrid').after(msgContainer);
+  }
+  
+  if (missingCats.length > 0 && presentCats.length > 0) {
+    const missingText = missingCats.join(' and ');
+    const presentText = presentCats.join(' & ');
+    const valsText = presentCats.map(c => `${scaledWeights[c].toFixed(1)}%`).join(' and ');
+    msgContainer.textContent = `As you currently have no mark added to ${missingText}, your ${presentText} will worth ${valsText}.`;
+  } else {
+    msgContainer.textContent = '';
+  }
 }
+
 function renderStudyAssessmentSelects(){
  const courses=getStudyCourses();
  for(const id of ['assessmentCourse','assessmentListCourse']){
@@ -587,11 +702,67 @@ function renderStudyChart(){
  const gradeData=courses.map(course=>courseGrade(course,gradebook)).filter(grade=>grade!==null);
  $('overallGradeSummary').textContent=gradeData.length?`Course average · ${(gradeData.reduce((sum,grade)=>sum+grade,0)/gradeData.length).toFixed(1)}%`:'No grades yet';
 }
-function renderStudyAssessmentRows(){
- const course=$('assessmentListCourse').value,records=getStudyGradebook().assessments.filter(item=>studyCourseKey(item.course)===studyCourseKey(course)).sort((a,b)=>String(b.date).localeCompare(String(a.date))||Number(b.id)-Number(a.id));
- $('studyAssessmentRows').innerHTML=records.map(item=>`<tr><td>${escape(item.name)}</td><td>${escape(item.type)}</td><td>${escape(item.date)}</td><td>${Number(item.score)} / ${Number(item.outOf)}</td><td>${assessmentPercent(item).toFixed(1)}%</td><td><button class="study-row-action" type="button" data-edit-assessment="${escape(item.id)}">Edit</button><button class="study-row-action danger" type="button" data-delete-assessment="${escape(item.id)}">Delete</button></td></tr>`).join('');
- $('studyNoAssessments').hidden=records.length>0;
+function getEffectiveWeight(item, gradebook) {
+  if (item.weight !== null && item.weight !== undefined && item.weight !== "") {
+    return { value: Number(item.weight), isCustom: true };
+  }
+  
+  const courseKey = studyCourseKey(item.course);
+  const itemCat = getWeightCategory(item.type);
+  
+  const { scaledWeights } = getScaledCategoryWeights(courseKey, gradebook);
+  const catWeight = scaledWeights[itemCat] || 0;
+  
+  const allMarksInCat = gradebook.assessments.filter(a => 
+    studyCourseKey(a.course) === courseKey && getWeightCategory(a.type) === itemCat
+  );
+  
+  let customWeightSum = 0;
+  let unweightedCount = 0;
+  
+  allMarksInCat.forEach(a => {
+    if (a.weight !== null && a.weight !== undefined && a.weight !== "") {
+      customWeightSum += Number(a.weight);
+    } else {
+      unweightedCount++;
+    }
+  });
+  
+  const remaining = Math.max(0, catWeight - customWeightSum);
+  return { 
+    value: unweightedCount > 0 ? (remaining / unweightedCount) : 0, 
+    isCustom: false 
+  };
 }
+
+// Updated rendering function for the table
+function renderStudyAssessmentRows(){
+ const course = $('assessmentListCourse').value;
+ const gradebook = getStudyGradebook();
+ const records = gradebook.assessments.filter(item => studyCourseKey(item.course) === studyCourseKey(course)).sort((a,b) => String(b.date).localeCompare(String(a.date)) || Number(b.id) - Number(a.id));
+ 
+ $('studyAssessmentRows').innerHTML = records.map(item => {
+   const weightData = getEffectiveWeight(item, gradebook);
+   // Add a little "~" symbol to automatically distributed weights so you know they aren't hardcoded
+   const weightDisplay = weightData.isCustom ? `${weightData.value.toFixed(1)}%` : `~${weightData.value.toFixed(1)}%`;
+   
+   return `<tr>
+     <td>${escape(item.name)}</td>
+     <td>${escape(item.type)}</td>
+     <td>${escape(item.date)}</td>
+     <td>${weightDisplay}</td>
+     <td>${Number(item.score)} / ${Number(item.outOf)}</td>
+     <td>${assessmentPercent(item).toFixed(1)}%</td>
+     <td>
+       <button class="study-row-action" type="button" data-edit-assessment="${escape(item.id)}">Edit</button>
+       <button class="study-row-action danger" type="button" data-delete-assessment="${escape(item.id)}">Delete</button>
+     </td>
+   </tr>`;
+ }).join('');
+ 
+ $('studyNoAssessments').hidden = records.length > 0;
+}
+
 function renderStudyView(){
  const courses=getStudyCourses(),hasCourses=courses.length>0&&!studySetupActive;
  $('studySetupScreen').hidden=hasCourses;
@@ -619,8 +790,10 @@ function saveStudyCourses(event){
 function saveAssessment(event){
  event.preventDefault();
  const score=Number($('assessmentScore').value),outOf=Number($('assessmentOutOf').value);
+ const weightValue=$('assessmentWeight').value;
+ const weight=weightValue ? Number(weightValue) : null;
  if(!Number.isFinite(score)||!Number.isFinite(outOf)||outOf<=0||score<0||score>outOf){$('studyAssessmentMessage').textContent='Enter a mark from 0 up to the “Out of” value.';return;}
- const gradebook=getStudyGradebook(),id=studyEditingAssessment||String(Date.now()),assessment={id,course:$('assessmentCourse').value,name:$('assessmentName').value.trim(),type:$('assessmentType').value,date:$('assessmentDate').value,score,outOf};
+ const gradebook=getStudyGradebook(),id=studyEditingAssessment||String(Date.now()),assessment={id,course:$('assessmentCourse').value,name:$('assessmentName').value.trim(),type:$('assessmentType').value,date:$('assessmentDate').value,score,outOf,weight};
  if(studyEditingAssessment)gradebook.assessments=gradebook.assessments.map(item=>String(item.id)===studyEditingAssessment?assessment:item);
  else gradebook.assessments.push(assessment);
  save('studyGradebook',JSON.stringify(gradebook));
@@ -628,45 +801,115 @@ function saveAssessment(event){
  $('studyAssessmentMessage').textContent='Assessment saved.';
  renderStudyView();
 }
+
 function setupStudyEvents(){
- if($('studyCourseForm').dataset.bound)return;
- $('studyCourseForm').dataset.bound='true';
- $('studyCourseForm').onsubmit=saveStudyCourses;
- $('addStudyCourse').onclick=()=>{const current=[...$('studyCoursePickerList').querySelectorAll('.study-course-search')].map(input=>input.value);renderCoursePicker([...current,'']);$('studyCoursePickerList').lastElementChild?.querySelector('input').focus();};
- $('studyCoursePickerList').onclick=event=>{const remove=event.target.closest('[data-remove-study-course]');if(!remove)return;remove.closest('.study-course-picker-row').remove();[...$('studyCoursePickerList').children].forEach((row,index)=>{row.querySelector('span').textContent=`Course ${index+1}`;row.querySelector('input').setAttribute('aria-label',`Course ${index+1}`);});};
- $('studyRestart').onclick=()=>{
-   if(!window.confirm('Restart course selection? Your saved grades and course notes will be kept.'))return;
-   studySetupActive=true;studyGradesView=false;renderStudyCoursePicker();showPage('study',true);
- };
- $('studyCourseTabs').onclick=event=>{const tab=event.target.closest('[data-study-course]');if(!tab)return;activeStudyCourse=tab.dataset.studyCourse;studyGradesView=false;renderStudyView();};
- $('studyGradesTab').onclick=()=>{studyGradesView=true;renderStudyView();};
- $('studyCourseForm').addEventListener('click',event=>{if(event.target.id==='addStudyCourse')event.preventDefault();});
- $('studyAssessmentForm').onsubmit=saveAssessment;
- $('studyAssessmentForm').insertAdjacentHTML('beforeend','<button class="secondary-btn study-cancel-edit" id="studyCancelEdit" type="button" hidden>Cancel edit</button>');
- $('studyCancelEdit').onclick=()=>{studyEditingAssessment='';$('studyAssessmentForm').reset();$('assessmentDate').value=localToday();$('studyAssessmentForm').classList.remove('is-editing');$('studyAssessmentForm').querySelector('[type="submit"]').textContent='Add assessment';$('studyCancelEdit').hidden=true;$('studyAssessmentMessage').textContent='';};
- $('gradeWeightCourse').onchange=()=>{renderStudyWeights();renderStudyChart();};
- $('studyWeightGrid').onchange=event=>{
-   const input=event.target.closest('[data-study-weight]');if(!input)return;
-   const value=Number(input.value);if(!Number.isFinite(value)||value<0||value>100){input.value='';return;}
-   const book=getStudyGradebook(),key=studyCourseKey($('gradeWeightCourse').value);
-   book.weights[key]={...(book.weights[key]||{}),[input.dataset.studyWeight]:value};
-   save('studyGradebook',JSON.stringify(book));renderStudyChart();
- };
- $('assessmentListCourse').onchange=renderStudyAssessmentRows;
- $('studyChartFilters').onchange=renderStudyChart;
- $('selectAllStudyCourses').onclick=()=>{$('studyChartFilters').querySelectorAll('input').forEach(input=>input.checked=true);renderStudyChart();};
- $('clearStudyCourses').onclick=()=>{$('studyChartFilters').querySelectorAll('input').forEach(input=>input.checked=false);renderStudyChart();};
- $('studyAssessmentRows').onclick=event=>{
-   const edit=event.target.closest('[data-edit-assessment]'),remove=event.target.closest('[data-delete-assessment]');if(!edit&&!remove)return;
-   const book=getStudyGradebook(),id=String((edit||remove).dataset.editAssessment||(edit||remove).dataset.deleteAssessment),item=book.assessments.find(mark=>String(mark.id)===id);if(!item)return;
-   if(remove){book.assessments=book.assessments.filter(mark=>String(mark.id)!==id);save('studyGradebook',JSON.stringify(book));renderStudyView();return;}
-   studyEditingAssessment=id;$('assessmentCourse').value=item.course;$('assessmentName').value=item.name;$('assessmentType').value=item.type;$('assessmentDate').value=item.date;$('assessmentScore').value=item.score;$('assessmentOutOf').value=item.outOf;$('studyAssessmentForm').classList.add('is-editing');$('studyAssessmentForm').querySelector('[type="submit"]').textContent='Save changes';$('studyCancelEdit').hidden=false;$('assessmentName').focus();
- };
- $('studyCoursePage').oninput=event=>{
-   if(event.target.id!=='studyCourseNotesInput')return;
-   const all=getStudyNotes();all[event.target.dataset.courseKey]=event.target.value;save('studyCourseNotes',JSON.stringify(all));$('studyNotesMessage').textContent='Notes saved.';
- };
+  if($('studyCourseForm').dataset.bound)return;
+  $('studyCourseForm').dataset.bound='true';
+  $('studyCourseForm').onsubmit=saveStudyCourses;
+  $('addStudyCourse').onclick=()=>{const current=[...$('studyCoursePickerList').querySelectorAll('.study-course-search')].map(input=>input.value);renderCoursePicker([...current,'']);$('studyCoursePickerList').lastElementChild?.querySelector('input').focus();};
+  $('studyCoursePickerList').onclick=event=>{const remove=event.target.closest('[data-remove-study-course]');if(!remove)return;remove.closest('.study-course-picker-row').remove();[...$('studyCoursePickerList').children].forEach((row,index)=>{row.querySelector('span').textContent=`Course ${index+1}`;row.querySelector('input').setAttribute('aria-label',`Course ${index+1}`);});};
+  $('studyRestart').onclick=()=>{
+    if(!window.confirm('Restart course selection? Your saved grades and course notes will be kept.'))return;
+    studySetupActive=true;studyGradesView=false;renderStudyCoursePicker();showPage('study',true);
+  };
+  $('studyCourseTabs').onclick=event=>{const tab=event.target.closest('[data-study-course]');if(!tab)return;activeStudyCourse=tab.dataset.studyCourse;studyGradesView=false;renderStudyView();};
+  $('studyGradesTab').onclick=()=>{studyGradesView=true;renderStudyView();};
+  $('studyCourseForm').addEventListener('click',event=>{if(event.target.id==='addStudyCourse')event.preventDefault();});
+  $('studyAssessmentForm').onsubmit=saveAssessment;
+  $('studyAssessmentForm').insertAdjacentHTML('beforeend','<button class="secondary-btn study-cancel-edit" id="studyCancelEdit" type="button" hidden>Cancel edit</button>');
+  $('studyCancelEdit').onclick=()=>{studyEditingAssessment='';$('studyAssessmentForm').reset();$('assessmentDate').value=localToday();$('studyAssessmentForm').classList.remove('is-editing');$('studyAssessmentForm').querySelector('[type="submit"]').textContent='Add assessment';$('studyCancelEdit').hidden=true;$('studyAssessmentMessage').textContent='';};
+  
+  $('gradeWeightCourse').onchange=()=>{renderStudyWeights();renderStudyChart();};
+  
+  // === Confirm 按钮的 100% 自动缩放逻辑 ===
+  // === Confirm 按钮的 100% 自动缩放逻辑 ===
+  const confirmWeightsBtn = $('confirmWeightsBtn');
+  if (confirmWeightsBtn) {
+    confirmWeightsBtn.onclick = () => {
+      const book=getStudyGradebook(),key=studyCourseKey($('gradeWeightCourse').value);
+      let currentWeights = book.weights[key] || {};
+      
+      // Initialize missing general categories
+      studyWeightCategories.forEach(cat => { 
+        if(currentWeights[cat] === undefined) currentWeights[cat] = 100/studyWeightCategories.length; 
+      });
+      
+      const inputs = Array.from($('studyWeightGrid').querySelectorAll('input'));
+      let editedSum = 0;
+      let editedTypes = [];
+      let uneditedTypes = [];
+      
+      inputs.forEach(input => {
+        const type = input.dataset.studyWeight;
+        let val = Number(input.value) || 0;
+        if (input.dataset.edited === 'true') {
+          editedSum += val;
+          editedTypes.push(type);
+          currentWeights[type] = val; 
+        } else {
+          uneditedTypes.push(type);
+        }
+      });
+      
+      const weightMsg = $('weightMessage');
+      if (editedSum > 100) {
+        weightMsg.textContent = 'Error: The inputs you adjusted exceed 100%!';
+        weightMsg.style.color = '#bc7575';
+        return;
+      }
+      
+      const remainingNeeded = Math.max(0, 100 - editedSum);
+      
+      let uneditedSum = 0;
+      uneditedTypes.forEach(t => { uneditedSum += currentWeights[t]; });
+      
+      uneditedTypes.forEach(t => {
+        if (uneditedSum === 0) {
+          currentWeights[t] = remainingNeeded / uneditedTypes.length;
+        } else {
+          currentWeights[t] = currentWeights[t] * (remainingNeeded / uneditedSum);
+        }
+      });
+      
+      book.weights[key] = currentWeights;
+      save('studyGradebook',JSON.stringify(book));
+      
+      weightMsg.textContent = 'Weights balanced and saved!';
+      weightMsg.style.color = 'var(--accent)';
+      setTimeout(() => { weightMsg.textContent = ''; }, 3000);
+      
+      renderStudyWeights(); 
+      renderStudyChart();
+    };
+  }
+  
+  $('assessmentListCourse').onchange=renderStudyAssessmentRows;
+  $('studyChartFilters').onchange=renderStudyChart;
+  $('selectAllStudyCourses').onclick=()=>{$( 'studyChartFilters').querySelectorAll('input').forEach(input=>input.checked=true);renderStudyChart();};
+  $('clearStudyCourses').onclick=()=>{$( 'studyChartFilters').querySelectorAll('input').forEach(input=>input.checked=false);renderStudyChart();};
+  $('studyAssessmentRows').onclick=event=>{
+    const edit=event.target.closest('[data-edit-assessment]'),remove=event.target.closest('[data-delete-assessment]');if(!edit&&!remove)return;
+    const book=getStudyGradebook(),id=String((edit||remove).dataset.editAssessment||(edit||remove).dataset.deleteAssessment),item=book.assessments.find(mark=>String(mark.id)===id);if(!item)return;
+    if(remove){book.assessments=book.assessments.filter(mark=>String(mark.id)!==id);save('studyGradebook',JSON.stringify(book));renderStudyView();return;}
+    studyEditingAssessment=id;
+    $('assessmentCourse').value=item.course;
+    $('assessmentName').value=item.name;
+    $('assessmentType').value=item.type;
+    $('assessmentDate').value=item.date;
+    $('assessmentScore').value=item.score;
+    $('assessmentOutOf').value=item.outOf;
+    $('assessmentWeight').value=item.weight || ''; 
+    $('studyAssessmentForm').classList.add('is-editing');
+    $('studyAssessmentForm').querySelector('[type="submit"]').textContent='Save changes';
+    $('studyCancelEdit').hidden=false;
+    $('assessmentName').focus();
+  };
+  $('studyCoursePage').oninput=event=>{
+    if(event.target.id!=='studyCourseNotesInput')return;
+    const all=getStudyNotes();all[event.target.dataset.courseKey]=event.target.value;save('studyCourseNotes',JSON.stringify(all));$('studyNotesMessage').textContent='Notes saved.';
+  };
 }
+
 function setupStudy(){
  setupStudyEvents();
  if(!$('assessmentDate').value)$('assessmentDate').value=localToday();
