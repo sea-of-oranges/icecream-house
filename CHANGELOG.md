@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 1.4 — November 1, 2026
+
+**Feature Updates & UI Tweaks**
+- Monthly Calendar: Added "Every year" to the repeat options dropdown for tracking anniversaries and annual school events.
+- Monthly Calendar: Simplified the event repeat interface by removing redundant custom interval fields, keeping the UI clean while maintaining the math under the hood.
+- Personal Tables: Added a dynamic row sorting system. Financial tables now default to sorting by Date (Descending/Newest first).
+- Table Customizer: Added a "Sort Rows By" interface to choose the active sort column and toggle between Ascending and Descending. Stacked the dropdowns vertically for a better fit on narrow screens.
+
 ## Version 1.3 — October 25, 2026
 
 Study Workspace & Gradebook Overhaul

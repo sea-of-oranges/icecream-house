@@ -99,6 +99,14 @@ const categoryPalette={Personal:{bg:'rgba(139,92,246,0.18)',color:'#8b5cf6'},Bir
   categoryPalette['Exams/tests']={bg:'rgba(222,158,55,0.2)',color:'#c88322'};
 const escape=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
 const siteUpdates=[
+  {version:'1.4',date:'November 1, 2026',items:[
+  'Calendar: Added "Every year" to the repeat options for annual events.',
+  'Calendar: Cleaned up the repeat UI by removing redundant interval fields.',
+  'Personal: Financial tables now default to sorting by Date (Descending).',
+  'Personal: Added sorting controls (Column and Ascending/Descending) to the table Customizer.',
+  'Personal: Stacked the sorting dropdowns to fit perfectly on narrow screens.'
+ ]},
+ 
   {version:'1.3',date:'October 25, 2026',items:[
   'Study: Grouped assessment weight settings into four categories (FPT, Final Exam, Participation, Other).',
   'Study: Added individual custom percentage weights to specific assessments.',
