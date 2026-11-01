@@ -241,12 +241,14 @@ const eventOccursOnDate=(event,date)=>{
  if(!event.date||difference<0||event.deletedDates?.includes(date)||(event.deletedFrom&&date>=event.deletedFrom))return false;
  if(repeat==='none'||event.repeatEnabled===false)return difference===0;
  const day=target.getUTCDay(),interval=Math.max(1,Number(event.repeatInterval)||1);
- const matches=repeat==='daily'&&difference%interval===0||repeat==='weekends'&&[0,6].includes(day)||repeat==='weekdays'&&day>=1&&day<=5||repeat==='weekly'&&difference%(7*interval)===0||['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][day]===repeat;
+ const yearDiff = target.getUTCFullYear() - start.getUTCFullYear();
+ 
+ const matches=repeat==='daily'&&difference%interval===0||repeat==='weekends'&&[0,6].includes(day)||repeat==='weekdays'&&day>=1&&day<=5||repeat==='weekly'&&difference%(7*interval)===0||['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][day]===repeat||(repeat==='yearly'&&target.getUTCMonth()===start.getUTCMonth()&&target.getUTCDate()===start.getUTCDate()&&yearDiff%interval===0);
  if(!matches)return false;
  let occurrence=0;
  for(let offset=0;offset<=difference;offset++){
    const current=new Date(start.getTime()+offset*86400000),currentDay=current.getUTCDay();
-   if(repeat==='daily'&&offset%interval===0||repeat==='weekends'&&[0,6].includes(currentDay)||repeat==='weekdays'&&currentDay>=1&&currentDay<=5||repeat==='weekly'&&offset%(7*interval)===0||['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][currentDay]===repeat)occurrence++;
+   if(repeat==='daily'&&offset%interval===0||repeat==='weekends'&&[0,6].includes(currentDay)||repeat==='weekdays'&&currentDay>=1&&currentDay<=5||repeat==='weekly'&&offset%(7*interval)===0||['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][currentDay]===repeat||(repeat==='yearly'&&current.getUTCMonth()===start.getUTCMonth()&&current.getUTCDate()===start.getUTCDate()&&(current.getUTCFullYear()-start.getUTCFullYear())%interval===0))occurrence++;
  }
  if((repeat==='weekends'||repeat==='weekdays'||['sunday','monday','tuesday','wednesday','thursday','friday','saturday'].includes(repeat))&&interval>1&&(occurrence-1)%interval!==0)return false;
  return event.repeatInfinite||occurrence<=(Math.max(1,Number(event.repeatCount)||1));
@@ -297,7 +299,6 @@ function setupEventControls(){
   const upcomingCategory=$('upcomingCategory');
   [category,upcomingCategory].forEach(select=>{if(select&&!Array.from(select.options).some(option=>option.value==='Exams/tests'))select.add(new Option('Exams/tests','Exams/tests'));});
 const accentPicker=document.querySelector('.accent-picker');
-
 // 1. Adds the Gold swatch
 if(accentPicker&&!accentPicker.querySelector('[data-accent="gold"]')){
   const goldSwatch=document.createElement('button');
@@ -308,7 +309,6 @@ if(accentPicker&&!accentPicker.querySelector('[data-accent="gold"]')){
   goldSwatch.setAttribute('aria-label','Warm gold theme');
   accentPicker.insertBefore(goldSwatch,accentPicker.querySelector('[data-accent="classic"]'));
 }
-
 // 2. Adds the Pink swatch
 if(accentPicker&&!accentPicker.querySelector('[data-accent="pink"]')){
   const pinkSwatch=document.createElement('button');
@@ -319,30 +319,32 @@ if(accentPicker&&!accentPicker.querySelector('[data-accent="pink"]')){
   pinkSwatch.setAttribute('aria-label','Pink theme');
   accentPicker.insertBefore(pinkSwatch,accentPicker.querySelector('[data-accent="classic"]'));
 }
-
 // 3. Binds the click event to all swatches (leave this as is)
 document.querySelectorAll('.swatch').forEach(b=>b.onclick=()=>{
   root.dataset.accent=b.dataset.accent;
   save('accent',b.dataset.accent);
 });
-
  const legacyRepeatFields=$('repeatCustomFields');
  if(legacyRepeatFields)legacyRepeatFields.remove();
  const repeat=$('eventRepeat');
  if(!repeat||$('eventRepeatEnabled'))return;
- repeat.innerHTML='<option value="daily">Every day</option><option value="weekends">Every weekend</option><option value="weekdays">Every weekday</option><option value="weekly">Every week</option><option value="monday">Every Monday</option><option value="tuesday">Every Tuesday</option><option value="wednesday">Every Wednesday</option><option value="thursday">Every Thursday</option><option value="friday">Every Friday</option><option value="saturday">Every Saturday</option><option value="sunday">Every Sunday</option>';
+ repeat.innerHTML='<option value="daily">Every day</option><option value="weekends">Every weekend</option><option value="weekdays">Every weekday</option><option value="weekly">Every week</option><option value="monday">Every Monday</option><option value="tuesday">Every Tuesday</option><option value="wednesday">Every Wednesday</option><option value="thursday">Every Thursday</option><option value="friday">Every Friday</option><option value="saturday">Every Saturday</option><option value="sunday">Every Sunday</option><option value="yearly">Every year</option>';
  const oldLabel=repeat.closest('label'),form=oldLabel.parentElement,options=document.createElement('div'),toggle=document.createElement('label');
  options.className='repeat-options';options.id='repeatOptions';options.hidden=true;
  oldLabel.firstChild.textContent='Repeat date';
    const countLabel=document.createElement('label');countLabel.innerHTML='Repeat times <span class="repeat-count-row"><input id="eventRepeatCount" type="number" min="1" value="1"><span class="repeat-infinite"><input id="eventRepeatInfinite" type="checkbox"> Infinite</span></span>';
-   const everyLabel=document.createElement('label');everyLabel.innerHTML='Every <input id="eventRepeatInterval" type="number" min="1" value="1">';
-   const unitLabel=document.createElement('label');unitLabel.innerHTML='Unit <select id="eventRepeatUnit"><option value="day">day(s)</option><option value="week">week(s)</option><option value="month">month(s)</option></select>';
    const repeatDateLabel=oldLabel;
    toggle.className='repeat-toggle';toggle.innerHTML='<span>Repeat</span><span><input id="eventRepeatEnabled" type="checkbox"> On</span>';
-   form.insertBefore(toggle,oldLabel);options.append(countLabel,everyLabel,unitLabel,repeatDateLabel);form.insertBefore(options,toggle.nextSibling);
+   form.insertBefore(toggle,oldLabel);
+   
+   // Removed the redundant everyLabel and unitLabel from this append
+   options.append(countLabel,repeatDateLabel);
+   
+   form.insertBefore(options,toggle.nextSibling);
  $('eventRepeatEnabled').onchange=event=>{options.hidden=!event.target.checked;};
  $('eventRepeatInfinite').onchange=event=>{$('eventRepeatCount').disabled=event.target.checked;};
 }
+
 function renderSchool(){
  const list=$('calendarList');
  const startDate=localToday();
@@ -1054,58 +1056,70 @@ function renderPersonalTables() {
   const container = $('personalTablesContainer');
   container.innerHTML = personalTables.map(table => {
     let html = `<div class="personal-table-block" data-table-id="${table.id}">
-      <h3 style="margin-bottom: 12px; cursor: pointer;" onclick="renderCustomizer('${table.id}')">${escape(table.title)} <span>🔧</span></h3>
+      <h3 style="margin-bottom: 12px; cursor: pointer;" onclick="renderCustomizer('${table.id}')">${escape(table.title)} <span>⚙️</span></h3>
       <div class="custom-table-wrapper">
         <table class="custom-table">
           <thead><tr>`;
     
-    table.columns.forEach(col => {
-      html += `<th>${escape(col.name)}</th>`;
-    });
+    table.columns.forEach(col => { html += `<th>${escape(col.name)}</th>`; });
     html += `</tr></thead><tbody>`;
     
     let totalCalc = 0;
-    table.rows.forEach((row, rIdx) => {
+    
+    // Default Financial to Date Descending if no sort is set
+    if (table.type === 'financial' && table.sortBy === undefined) {
+      table.sortBy = { col: 'Date', dir: 'desc' };
+    }
+    
+    // Map original indices so updates apply to the correct array element
+    let rowData = table.rows.map((row, idx) => ({ row, originalIndex: idx }));
+    
+    // Apply Sorting
+    if (table.sortBy && table.sortBy.col) {
+      const colDef = table.columns.find(c => c.name === table.sortBy.col);
+      const dirMultiplier = table.sortBy.dir === 'desc' ? -1 : 1;
+      
+      rowData.sort((a, b) => {
+        let valA = a.row[table.sortBy.col] || '';
+        let valB = b.row[table.sortBy.col] || '';
+        if (colDef && colDef.type === 'number') {
+          return (Number(valA) - Number(valB)) * dirMultiplier;
+        }
+        return String(valA).localeCompare(String(valB)) * dirMultiplier;
+      });
+    }
+
+    // Render Sorted Rows
+    rowData.forEach((data) => {
+      const row = data.row;
+      const rIdx = data.originalIndex; // Use original index for inline update functions
       html += `<tr>`;
       table.columns.forEach((col, cIdx) => {
         let val = row[col.name] || '';
         let cellInner = '';
 
-        // Fixed Image Link Logic: Always render both, toggle visibility, and enforce min-width
         if (col.name === 'Image Link') {
           const hasLink = !!val;
           cellInner = `
             <button class="soft-btn" type="button" style="font-size: 0.75rem; padding: 4px 8px; width: 100%; white-space: nowrap; min-width: 90px;" 
                     onclick="this.nextElementSibling.hidden = false; this.hidden = true; this.nextElementSibling.focus();"
-                    ${hasLink ? '' : 'hidden'}>
-              Edit Link
-            </button>
-            <input type="text" placeholder="Paste URL..." value="${escape(val)}" 
-              style="min-width: 140px; width: 100%;"
-              ${hasLink ? 'hidden' : ''}
+                    ${hasLink ? '' : 'hidden'}>Edit Link</button>
+            <input type="text" placeholder="Paste URL..." value="${escape(val)}" style="min-width: 140px; width: 100%;" ${hasLink ? 'hidden' : ''}
               onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value); if(this.value) { this.hidden = true; this.previousElementSibling.hidden = false; }" 
               onblur="if(this.value) { this.hidden = true; this.previousElementSibling.hidden = false; }" />
           `;
         } else if (col.type === 'select') {
-          cellInner = `<select onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)">
-            <option value=""></option>
+          cellInner = `<select onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)"><option value=""></option>
             ${col.options ? col.options.map(opt => `<option value="${escape(opt)}" ${val === opt ? 'selected' : ''}>${escape(opt)}</option>`).join('') : ''}
           </select>`;
         } else if (col.type === 'multiselect') {
           let selectedVals = typeof val === 'string' && val ? val.split(', ') : (Array.isArray(val) ? val : []);
           let displayTxt = selectedVals.length ? selectedVals.join(', ') : 'Select...';
-          
           cellInner = `
             <div class="multi-select-container" id="multi-${table.id}-${rIdx}-${cIdx}">
               <button class="multi-select-toggle" type="button" onclick="toggleMultiSelect('${table.id}', ${rIdx}, ${cIdx})">${escape(displayTxt)}</button>
               <div class="multi-select-dropdown" id="multi-drop-${table.id}-${rIdx}-${cIdx}" hidden>
-                ${col.options ? col.options.map(opt => `
-                  <label class="multi-select-option" onclick="event.stopPropagation()">
-                    <input type="checkbox" value="${escape(opt)}" ${selectedVals.includes(opt) ? 'checked' : ''} 
-                           onchange="updateCustomMultiSelect('${table.id}',${rIdx}, ${cIdx}, '${escape(col.name)}')">
-                    ${escape(opt)}
-                  </label>
-                `).join('') : ''}
+                ${col.options ? col.options.map(opt => `<label class="multi-select-option" onclick="event.stopPropagation()"><input type="checkbox" value="${escape(opt)}" ${selectedVals.includes(opt) ? 'checked' : ''} onchange="updateCustomMultiSelect('${table.id}', ${rIdx}, ${cIdx}, '${escape(col.name)}')">${escape(opt)}</label>`).join('') : ''}
               </div>
             </div>`;
         } else if (col.type === 'number') {
@@ -1114,19 +1128,14 @@ function renderPersonalTables() {
         } else if (col.type === 'date') {
           cellInner = `<input type="date" value="${val}" onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" />`;
         } else {
-          cellInner = `<textarea rows="1" placeholder="${col.placeholder || ''}" 
-            onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" 
-            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'">${escape(val)}</textarea>`;
+          cellInner = `<textarea rows="1" placeholder="${col.placeholder || ''}" onchange="updateTableCell('${table.id}', ${rIdx}, '${col.name}', this.value)" oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'">${escape(val)}</textarea>`;
         }
 
-        // Image check on first column
         let imageHtml = '';
         if (cIdx === 0) {
           let valImage = row['Image Link'] || '';
           imageHtml = `<div id="img-wrap-${table.id}-${rIdx}" style="display:contents">`;
-          if (valImage.match(/^https?:\/\//)) {
-            imageHtml += `<img src="${escape(valImage)}" class="row-thumbnail" alt="" onerror="this.style.display='none'" />`;
-          }
+          if (valImage.match(/^https?:\/\//)) { imageHtml += `<img src="${escape(valImage)}" class="row-thumbnail" alt="" onerror="this.style.display='none'" />`; }
           imageHtml += `</div>`;
           html += `<td><div class="cell-with-image">${imageHtml}${cellInner}</div></td>`;
         } else {
@@ -1137,15 +1146,10 @@ function renderPersonalTables() {
     });
 
     if (table.type === 'financial') {
-      html += `<tr class="table-total-row">
-        <td colspan="${table.columns.length - 1}" style="text-align: right;"><strong>Total:</strong></td>
-        <td>$${totalCalc.toFixed(2)}</td>
-      </tr>`;
+      html += `<tr class="table-total-row"><td colspan="${table.columns.length - 1}" style="text-align: right;"><strong>Total:</strong></td><td>$${totalCalc.toFixed(2)}</td></tr>`;
     }
     
-    html += `</tbody></table></div>
-      <button class="soft-btn" style="margin-top:8px; font-size:0.8rem;" onclick="addTableRow('${table.id}')">+ Add Row</button>
-    </div>`;
+    html += `</tbody></table></div><button class="soft-btn" style="margin-top:8px; font-size:0.8rem;" onclick="addTableRow('${table.id}')">+ Add Row</button></div>`;
     return html;
   }).join('');
 
@@ -1156,7 +1160,6 @@ function renderPersonalTables() {
     });
   }, 0);
 }
-
 // Global functions for inline HTML handlers
 window.updateTableCell = function(tableId, rowIdx, colName, value) {
   const table = personalTables.find(t => t.id === tableId);
@@ -1235,15 +1238,14 @@ window.renderCustomizer = function(tableId) {
   const content = $('customizerContent');
   const table = personalTables.find(t => t.id === tableId);
   
-  if(!table) {
-    customizer.hidden = true;
-    return;
-  }
+  if(!table) { customizer.hidden = true; return; }
   
   customizer.hidden = false;
   $('activeTableName').textContent = "Settings";
   
-  // Add Table Name editor at the top
+  const currentSortCol = table.sortBy?.col || '';
+  const currentSortDir = table.sortBy?.dir || 'asc';
+
   let html = `
     <div style="margin-bottom: 20px;">
       <label style="font-size: 0.75rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Table Name</label>
@@ -1251,9 +1253,36 @@ window.renderCustomizer = function(tableId) {
         style="width: 100%; background: var(--control-bg); border: 1px solid var(--panel-border); color: var(--text); padding: 8px 12px; border-radius: 8px; margin-top: 6px; font-weight: 700;"
         onchange="renameTable('${table.id}', this.value)" />
     </div>
+
+    <!-- NEW SORTING BLOCK -->
+    <div style="margin-bottom: 24px;">
+      <label style="font-size: 0.75rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Sort Rows By</label>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+        <select style="width: 100%; background: var(--control-bg); border: 1px solid var(--panel-border); color: var(--text); padding: 6px 8px; border-radius: 6px; font-size: 0.8rem;" onchange="updateTableSort('${table.id}', this.value, null)">
+          <option value="">None (Custom Order)</option>
+          ${table.columns.map(c => `<option value="${escape(c.name)}" ${currentSortCol === c.name ? 'selected' : ''}>${escape(c.name)}</option>`).join('')}
+        </select>
+        <select style="width: 100%; background: var(--control-bg); border: 1px solid var(--panel-border); color: var(--text); padding: 6px 8px; border-radius: 6px; font-size: 0.8rem;" onchange="updateTableSort('${table.id}', null, this.value)">
+          <option value="asc" ${currentSortDir === 'asc' ? 'selected' : ''}>Ascending / A-Z</option>
+          <option value="desc" ${currentSortDir === 'desc' ? 'selected' : ''}>Descending / Z-A</option>
+        </select>
+      </div>
+    </div>
+
     <div style="font-size: 0.75rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Columns</div>
   `;
   
+window.updateTableSort = function(tableId, col, dir) {
+  const table = personalTables.find(t => t.id === tableId);
+  if (table) {
+    if (!table.sortBy) table.sortBy = { col: '', dir: 'asc' };
+    if (col !== null) table.sortBy.col = col;
+    if (dir !== null) table.sortBy.dir = dir;
+    savePersonalTables();
+    renderPersonalTables();
+  }
+};
+
   html += table.columns.map((col, idx) => {
     const isPrimary = idx === 0; 
     
@@ -1410,7 +1439,34 @@ document.querySelectorAll('.editable-task-list').forEach(list=>list.addEventList
 $('upcomingForm').onsubmit=e=>{e.preventDefault();const title=$('upcomingTitle').value.trim(),dueDate=$('upcomingDate').value,category=$('upcomingCategory').value;if(!title||!dueDate)return;if(dueDate<=localToday()){$('upcomingMessage').textContent='Choose a future date for Upcoming.';return;}const upcoming=getUpcomingTasks();upcoming.push({id:Date.now(),title,dueDate,category,done:false});save('upcomingTasks',JSON.stringify(upcoming));e.target.reset();$('upcomingMessage').textContent='Upcoming task added.';renderUpcoming();if(selectedDate===dueDate)renderTasks('daily');};
  $('upcomingTaskList').onclick=e=>{const trigger=e.target.closest('[data-upcoming-delete]')||e.target.closest('[data-upcoming-id]');if(!trigger)return;const id=String(trigger.dataset.upcomingId||trigger.dataset.upcomingDelete),kind=trigger.dataset.upcomingKind,dueDate=trigger.dataset.upcomingDate;if(kind==='daily'){const storage=`dailyTasks:${dueDate}`,tasks=JSON.parse(get(storage,'[]'));const taskId=id.replace(`daily:${dueDate}:`,'');save(storage,JSON.stringify(trigger.dataset.upcomingDelete?tasks.filter(task=>String(task.id)!==taskId):tasks.map(task=>String(task.id)===taskId?{...task,done:!task.done}:task)));}else if(kind==='event'){let events=getEvents(),event=events.find(item=>getEventId(item)===trigger.dataset.upcomingEvent);if(event){if(trigger.dataset.upcomingDelete){if(eventRepeats(event))event.deletedDates=[...(event.deletedDates||[]),dueDate];else events=events.filter(item=>getEventId(item)!==trigger.dataset.upcomingEvent);}else setEventDoneOnDate(event,dueDate,!eventDoneOnDate(event,dueDate));save('events',JSON.stringify(events));}}else{let upcoming=getExplicitUpcomingTasks();upcoming=trigger.dataset.upcomingDelete?upcoming.filter(task=>String(task.id)!==id):upcoming.map(task=>String(task.id)===id?{...task,done:!task.done}:task);save('upcomingTasks',JSON.stringify(upcoming));}renderUpcoming();renderTasks('daily');renderMonth();};
 setupEventControls();
-$('eventForm').onsubmit=e=>{e.preventDefault();const repeatEnabled=$('eventRepeatEnabled').checked,repeat=repeatEnabled?$('eventRepeat').value:'none',events=getEvents();events.push({id:`event-${Date.now()}`,date:$('eventDate').value,name:$('eventTitle').value,category:$('eventCategory').value,repeat,repeatEnabled,repeatCount:Math.max(1,Number($('eventRepeatCount').value)||1),repeatInfinite:$('eventRepeatInfinite').checked,repeatInterval:Math.max(1,Number($('eventRepeatInterval').value)||1),repeatUnit:$('eventRepeatUnit').value,done:false,deletedDates:[]});save('events',JSON.stringify(events));e.target.reset();$('repeatOptions').hidden=true;$('eventRepeatCount').disabled=false;renderMonth();renderTasks('daily');};$('eventFullDay').onchange=e=>$('timeFields').hidden=e.target.checked;
+$('eventForm').onsubmit=e=>{
+  e.preventDefault();
+  const repeatEnabled=$('eventRepeatEnabled').checked,
+        repeat=repeatEnabled?$('eventRepeat').value:'none',
+        events=getEvents();
+        
+  events.push({
+    id:`event-${Date.now()}`,
+    date:$('eventDate').value,
+    name:$('eventTitle').value,
+    category:$('eventCategory').value,
+    repeat,
+    repeatEnabled,
+    repeatCount:Math.max(1,Number($('eventRepeatCount').value)||1),
+    repeatInfinite:$('eventRepeatInfinite').checked,
+    repeatInterval: 1, // Hardcoded to 1 since we rely on the main Repeat Date dropdown
+    repeatUnit: 'day', 
+    done:false,
+    deletedDates:[]
+  });
+  
+  save('events',JSON.stringify(events));
+  e.target.reset();
+  $('repeatOptions').hidden=true;
+  $('eventRepeatCount').disabled=false;
+  renderMonth();
+  renderTasks('daily');
+};
 $('setClockButton').onclick=()=>{customClock=$('customTime').value;save('clockTime',customClock);updateClock();};$('resetClockButton').onclick=()=>{customClock=null;localStorage.removeItem(key('clockTime'));updateClock();};$('clockFormat').onchange=()=>{save('clockFormat',$('clockFormat').value);updateClock();};
 $('applyBackgroundUrl').onclick=()=>{let u=$('backgroundUrl').value.trim();try{new URL(u);root.style.setProperty('--custom-bg-image',`url("${u}")`);save('background',u);$('backgroundMessage').textContent='Background saved.';}catch{$('backgroundMessage').textContent='Enter a valid image URL.';}};$('backgroundFile').onchange=e=>{let r=new FileReader();r.onload=()=>{root.style.setProperty('--custom-bg-image',`url("${r.result}")`);save('background',r.result);};r.readAsDataURL(e.target.files[0]);};$('clearBackground').onclick=()=>{root.style.setProperty('--custom-bg-image','none');localStorage.removeItem(key('background'));save('background', 'cleared');};
 $('startTimer').onclick=()=>{if(timerInterval){clearInterval(timerInterval);timerInterval=null;$('startTimer').textContent='Start';return;}timerSeconds=Math.max(1,Number($('customMinutes').value)||25)*60;$('startTimer').textContent='Pause';timerInterval=setInterval(()=>{timerSeconds--;let m=String(Math.floor(timerSeconds/60)).padStart(2,'0'),s=String(timerSeconds%60).padStart(2,'0');$('timerDisplay').textContent=`${m}:${s}`;if(timerSeconds<=0){clearInterval(timerInterval);timerInterval=null;$('startTimer').textContent='Start';$('timerMessage').textContent='Focus sprint complete.';}},1000);};$('resetTimer').onclick=()=>{$('timerDisplay').textContent=`${String(Number($('customMinutes').value)||25).padStart(2,'0')}:00`;};document.querySelectorAll('.timer-preset').forEach(b=>b.onclick=()=>{$('customMinutes').value=b.dataset.minutes;$('timerDisplay').textContent=`${b.dataset.minutes}:00`;});
