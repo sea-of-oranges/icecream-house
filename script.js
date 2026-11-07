@@ -6,12 +6,14 @@ const key=name=>`icecreamHouse:${session()}:${name}`;
 const get=(name,fallback='')=>localStorage.getItem(key(name))??fallback;
 let cloudSyncTimer=null;
 let hdsbCalendarRefreshTimer=null;
+let monthRefreshTimer=null;
 const save=(name,value)=>{localStorage.setItem(key(name),value);queueCloudSync();};
 const clearSessionData=()=>{
  localStorage.removeItem('icecreamHouseSession');
 };
 const normalizeUsername=value=>String(value||'').trim().replace(/\s+/g,' ').slice(0,30);
 const localToday=()=>{const date=new Date();return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;};
+let lastMonthRenderDate=localToday();
 const authMessage=reason=>reason==='Email logins are disabled'?'Enable Authentication > Providers > Email in your Supabase project.':reason==='Invalid login credentials'?'Username or password does not match.':reason;
 const supabaseEnabled=()=>Boolean(window.supabase&&window.ICECREAM_SUPABASE_READY);
 let supabaseClient=null;
@@ -99,6 +101,14 @@ const categoryPalette={Personal:{bg:'rgba(139,92,246,0.18)',color:'#8b5cf6'},Bir
   categoryPalette['Exams/tests']={bg:'rgba(222,158,55,0.2)',color:'#c88322'};
 const escape=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
 const siteUpdates=[
+  {version:'1.5',date:'November 6, 2026',items:[
+  'Calendar: Today has a subtle outline that updates automatically each day.',
+  'Calendar: Added optional event times to monthly entries, Daily Tasks, and Upcoming. All-day events appear first, followed by timed events sorted earliest to latest.',
+  'Calendar: Deleting one occurrence or the remaining series of a repeating event from Daily Tasks now updates Upcoming and the monthly calendar.',
+  'Account: Added a My Account panel with the signed-in account name, email, and log-out action.',
+  'Layout: Adapted the website for desktop, tablet, and phone screens.',
+  'Branding: Added a tightly cropped Icecream House logo as the browser-tab icon.'
+ ]},
   {version:'1.4',date:'November 1, 2026',items:[
   'Calendar: Added "Every year" to the repeat options for annual events.',
   'Calendar: Cleaned up the repeat UI by removing redundant interval fields.',
@@ -106,9 +116,10 @@ const siteUpdates=[
   'Personal: Added sorting controls (Column and Ascending/Descending) to the table Customizer.',
   'Personal: Stacked the sorting dropdowns to fit perfectly on narrow screens.'
  ]},
- 
+
   {version:'1.3',date:'October 25, 2026',items:[
   'Study: Grouped assessment weight settings into four categories (FPT, Final Exam, Participation, Other).',
+  'Appearance: add a better animation to the website',
   'Study: Added individual custom percentage weights to specific assessments.',
   'Study: Added a "Confirm Weights" button to safely auto-balance general category weights to 100%.',
   'Study: The assessment history table now displays real-time effective weights (~ for auto-distributed).',
@@ -152,6 +163,31 @@ function setUpdatesOpen(open,restoreFocus=false){
  if(open)$('updatesClose').focus();
  else if(restoreFocus)$('updatesTrigger').focus();
 }
+function setAccountOpen(open,restoreFocus=false){
+ $('accountPopover').hidden=!open;
+ $('accountTrigger').setAttribute('aria-expanded',String(open));
+ if(open)$('accountClose').focus();
+ else if(restoreFocus)$('accountTrigger').focus();
+}
+async function renderAccountDetails(){
+ const accountName=session();
+ let email='';
+ let localAccount=null;
+ try{localAccount=JSON.parse(localStorage.getItem('icecreamHouseAccount')||'null');}
+ catch(error){console.warn('Could not read local account details:',error);}
+ if(localAccount?.username?.toLowerCase()===accountName.toLowerCase())email=localAccount.email||'';
+ const client=getSupabaseClient();
+ if(client){
+  const {data,error}=await client.auth.getSession();
+  if(error)console.warn('Could not load signed-in account details:',error.message);
+  const user=data?.session?.user;
+  if(user){
+   $('accountName').textContent=normalizeUsername(user.user_metadata?.username||accountName);
+   email=user.email||email;
+  }else $('accountName').textContent=accountName;
+ }else $('accountName').textContent=accountName;
+ $('accountEmail').textContent=email||'Email unavailable';
+}
 const moodChoices=[
  ['happy','Happy','mood-faces/happy.png'],
  ['overwhelmed','Overwhelmed','mood-faces/overwhelmed.png'],
@@ -169,18 +205,14 @@ const songFiles=[
  'Milky Day _ Denise Julia - Let Me_L.ogg',
  'f0rest - Spring_L.ogg',
  '林拿巴 - 怎么了 (Live中韩双语版)_L.ogg',
- '周深 - 星昼_L.ogg',
  'John Concepcion _ Vinsint - HITMYLINE (Explicit)_L.ogg',
  'Jigoooo Radio - It’s Okay Today_L.ogg',
  'Holly Humberstone - London Is Lonely_L.ogg',
  '周深 - 相爱恨早_L.ogg',
- 'Feeloka - Washed Away_L.ogg',
  '玉香超级甜 - 江皓南 (般配)_L.ogg',
  'Justin Peng - For Good (Chinese Version)_L.ogg',
  'Zy - love beat (爱的心跳)_L.ogg',
- '周深 - 今天的我们_L.ogg',
  'Anson Seabra - Broken_L.ogg',
- '周深 - 情非得已 (2025 9_29Hz世界巡回演唱会·多伦多站现场)_L.ogg',
  'Galdive - Dormer_L.ogg',
  'midnight - Absolute Reprise_L.ogg'
 ];
@@ -241,6 +273,11 @@ const getEventId=(event)=>String(event.id||`${event.date||selectedDate}-${event.
 const eventRepeats=event=>event.repeatEnabled!==false&&Boolean(event.repeat)&&event.repeat!=='none';
 const eventDoneOnDate=(event,date)=>eventRepeats(event)?(event.doneDates||[]).includes(date):Boolean(event.done);
 const setEventDoneOnDate=(event,date,done)=>{if(eventRepeats(event)){const dates=new Set(event.doneDates||[]);if(done)dates.add(date);else dates.delete(date);event.doneDates=[...dates];}else event.done=done;};
+const formatEventTime=event=>{
+ const format=time=>/^\d{2}:\d{2}$/.test(time||'')?new Date(2000,0,1,...time.split(':').map(Number)).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
+ const start=format(event.startTime),end=format(event.endTime);
+ return start&&end?`${start} – ${end}`:start||end;
+};
 const dateParts=date=>{const [year,month,day]=String(date).split('-').map(Number);return new Date(Date.UTC(year,month-1,day));};
 const isExamTask=task=>String(task.category||'').toLowerCase()==='exams/tests';
 const prioritizeExamTasks=tasks=>[...tasks].sort((a,b)=>Number(isExamTask(b))-Number(isExamTask(a)));
@@ -269,7 +306,8 @@ const getDailyTaskItems=(date=selectedDate)=>{
    label:event.name,
   done:eventDoneOnDate(event,date),
    source:'event',
-   category:event.category||'Personal'
+  category:event.category||'Personal',
+  time:formatEventTime(event)
  }));
  return prioritizeExamTasks([...calendarEvents, ...upcoming, ...saved.filter(task => task.source !== 'event' && task.source !== 'upcoming')]);
 };
@@ -285,7 +323,7 @@ const getUpcomingTasks=()=>{
  const start=dateParts(localToday());
  for(let offset=1;offset<=366;offset++){
    const date=new Date(start.getTime()+offset*86400000).toISOString().slice(0,10);
-  getEvents().filter(event=>eventOccursOnDate(event,date)).forEach(event=>calendar.push({id:`event:${getEventId(event)}:${date}`,title:event.name,dueDate:date,category:event.category||'Personal',done:eventDoneOnDate(event,date),kind:'event',eventId:getEventId(event)}));
+  getEvents().filter(event=>eventOccursOnDate(event,date)).forEach(event=>calendar.push({id:`event:${getEventId(event)}:${date}`,title:event.name,dueDate:date,category:event.category||'Personal',done:eventDoneOnDate(event,date),kind:'event',eventId:getEventId(event),time:formatEventTime(event)}));
  }
  return [...explicit,...daily,...calendar];
 };
@@ -294,15 +332,26 @@ const formatDueDate=date=>String(date).split('-').join('/');
 function renderUpcoming(){
  const tasks=getUpcomingTasks().sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
  const list=$('upcomingTaskList');
- list.innerHTML=tasks.map(task=>`<li><input type="checkbox" data-upcoming-id="${task.id}" data-upcoming-kind="${task.kind}" data-upcoming-date="${task.dueDate}" data-upcoming-event="${task.eventId||''}" ${task.done?'checked':''}><div class="upcoming-task-copy"><strong>${escape(task.title)}</strong><span>Due ${formatDueDate(task.dueDate)} · ${escape(task.category)}</span></div><button class="delete-task" data-upcoming-delete="${task.id}" data-upcoming-kind="${task.kind}" data-upcoming-date="${task.dueDate}" data-upcoming-event="${task.eventId||''}" aria-label="Delete ${escape(task.title)}">×</button></li>`).join('');
+ list.innerHTML=tasks.map(task=>`<li><input type="checkbox" data-upcoming-id="${task.id}" data-upcoming-kind="${task.kind}" data-upcoming-date="${task.dueDate}" data-upcoming-event="${task.eventId||''}" ${task.done?'checked':''}><div class="upcoming-task-copy"><strong>${escape(task.title)}</strong><span>Due ${formatDueDate(task.dueDate)} · ${escape(task.category)}</span>${task.time?`<span class="upcoming-time">${escape(task.time)}</span>`:''}</div><button class="delete-task" data-upcoming-delete="${task.id}" data-upcoming-kind="${task.kind}" data-upcoming-date="${task.dueDate}" data-upcoming-event="${task.eventId||''}" aria-label="Delete ${escape(task.title)}">×</button></li>`).join('');
  $('upcomingEmpty').hidden=tasks.length>0;
  $('upcomingCount').textContent=`${tasks.filter(task=>!task.done).length} upcoming`;
 }
-const eventTag=(name,category='Personal')=>{const palette=categoryPalette[category]||categoryPalette.Personal;return `<span class="day-event"><span class="day-event-tag" style="--tag-bg:${palette.bg};--tag-color:${palette.color};">${escape(category)}</span><span class="day-event-name">${escape(name)}</span></span>`;};
+const eventTag=(name,category='Personal',time='')=>{const palette=categoryPalette[category]||categoryPalette.Personal;return `<span class="day-event"><span class="day-event-tag" style="--tag-bg:${palette.bg};--tag-color:${palette.color};">${escape(category)}</span><span class="day-event-copy"><span class="day-event-name">${escape(name)}</span>${time?`<span class="day-event-time">${escape(time)}</span>`:''}</span></span>`;};
 function setupEventControls(){
  const weekdayHeader=document.querySelector('.calendar-weekdays');
  if(weekdayHeader)weekdayHeader.innerHTML='<span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>';
  const category=$('eventCategory');
+ const fullDay=$('eventFullDay'),timeFields=$('timeFields'),startTime=$('eventStart'),endTime=$('eventEnd');
+ const startLabel=document.createElement('label'),endLabel=document.createElement('label');
+ startLabel.append('Start time',startTime);
+ endLabel.append('End time',endTime);
+ timeFields.replaceChildren(startLabel,endLabel);
+ const updateEventTimeFields=()=>{
+   timeFields.hidden=fullDay.checked;
+   startTime.required=!fullDay.checked;
+ };
+ fullDay.addEventListener('change',updateEventTimeFields);
+ updateEventTimeFields();
  if(category&&!Array.from(category.options).some(option=>option.value==='Lessons'))category.add(new Option('Lessons','Lessons'));
   const upcomingCategory=$('upcomingCategory');
   [category,upcomingCategory].forEach(select=>{if(select&&!Array.from(select.options).some(option=>option.value==='Exams/tests'))select.add(new Option('Exams/tests','Exams/tests'));});
@@ -366,33 +415,42 @@ function renderSchool(){
  hdsbCalendarRefreshTimer=setTimeout(renderSchool,Math.max(1,nextRefresh.getTime()-Date.now()));
 }
 function renderMonth() {
+  const today = localToday();
+  lastMonthRenderDate = today;
   const y = viewDate.getFullYear();
   const m = viewDate.getMonth();
   const start = (new Date(y, m, 1).getDay() + 6) % 7;
   
   $('monthLabel').textContent = viewDate.toLocaleDateString([], { month: 'long', year: 'numeric' });$('monthGrid').innerHTML = Array.from({ length: 42 }, (_, i) => {
     const d = new Date(y, m, i - start + 1);
-    const k = d.toISOString().slice(0, 10);
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const out = d.getMonth() !== m;
+    const isToday = k === today;
     
     // ONLY pull Calendar events and HDSB events for the dots (ignore daily/upcoming tasks)
     const calendarEvents = getEvents()
       .filter(event => eventOccursOnDate(event, k))
       .map(event => ({
         label: event.name,
-        category: event.category || 'Personal'
+        category: event.category || 'Personal',
+        time: formatEventTime(event),
+        sortTime: event.startTime || ''
       }));
       
-    const tasks = prioritizeExamTasks([...calendarEvents, ...hdsbEventsOnDate(k)]);
+    const tasks = [...calendarEvents, ...hdsbEventsOnDate(k)].sort((a, b) => {
+      if (!a.sortTime) return b.sortTime ? -1 : 0;
+      if (!b.sortTime) return 1;
+      return a.sortTime.localeCompare(b.sortTime);
+    });
     const mood = moodChoices.find(([id]) => id === get(`mood:${k}`));
     
-    return `<button class="calendar-day ${out ? 'muted' : ''} ${k === selectedDate ? 'selected' : ''}" data-date="${k}" aria-label="${d.toLocaleDateString([], { month: 'long', day: 'numeric' })}${mood ? `, mood: ${mood[1]}` : ''}">
+    return `<button class="calendar-day ${out ? 'muted' : ''} ${isToday ? 'today' : ''} ${k === selectedDate ? 'selected' : ''}" data-date="${k}" ${isToday ? 'aria-current="date"' : ''} aria-label="${d.toLocaleDateString([], { month: 'long', day: 'numeric' })}${isToday ? ', today' : ''}${mood ? `, mood: ${mood[1]}` : ''}">
       <span class="day-top">
         <span class="day-number">${d.getDate()}</span>
         ${mood ? `<img class="day-mood" src="${mood[2]}" alt="" title="${mood[1]}" />` : ''}
       </span>
       <span class="day-events">
-        ${tasks.map(task => eventTag(task.label, task.category || 'Holiday')).join('')}
+        ${tasks.map(task => eventTag(task.label, task.category || 'Holiday', task.time)).join('')}
       </span>
     </button>`;
   }).join('');
@@ -401,10 +459,26 @@ function renderMonth() {
     b.onclick = () => selectDate(b.dataset.date);
   });
 }
+function refreshTodayMarker() {
+  if (localToday() !== lastMonthRenderDate) renderMonth();
+}
+function scheduleMonthRefresh() {
+  if (monthRefreshTimer) clearTimeout(monthRefreshTimer);
+  const nextMidnight = new Date();
+  nextMidnight.setHours(24, 0, 0, 100);
+  monthRefreshTimer = setTimeout(() => {
+    refreshTodayMarker();
+    scheduleMonthRefresh();
+  }, Math.max(1, nextMidnight.getTime() - Date.now()));
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refreshTodayMarker();
+});
+window.addEventListener('focus', refreshTodayMarker);
 const displayDate=date=>String(date).replace(/^(\d{4})-(\d{2})-(\d{2})$/,'$1/$2/$3');
 const parseTypedDate=value=>{const match=String(value).trim().match(/^(\d{4})\/(\d{2})\/(\d{2})$/);if(!match)return null;const candidate=`${match[1]}-${match[2]}-${match[3]}`,parsed=dateParts(candidate);return parsed.toISOString().slice(0,10)===candidate?candidate:null;};
 function selectDate(date){selectedDate=date||selectedDate;dailyDateDisplay.value=displayDate(selectedDate);$('dailyDateLabel').textContent=selectedDate===localToday()?'Today':new Date(`${selectedDate}T12:00`).toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});renderTasks('daily');document.querySelectorAll('.calendar-day').forEach(b=>b.classList.toggle('selected',b.dataset.date===selectedDate));}
-function renderTasks(group){const storage=group==='daily'?`dailyTasks:${selectedDate}`:'weeklyTasks',tasks=group==='daily'?getDailyTaskItems(selectedDate):JSON.parse(get(storage,'[]'));const list=$(group==='daily'?'dailyTaskList':'weeklyTaskList');list.innerHTML=tasks.map(t=>`<li><input type="checkbox" data-id="${t.id}" data-source="${t.source||'task'}" ${t.done?'checked':''}><span class="${t.done?'done':''}">${escape(t.label)}</span><button class="delete-task" data-delete="${t.id}" data-source="${t.source||'task'}" data-date="${selectedDate}">×</button></li>`).join('');$(group==='daily'?'dailyCount':'weeklyCount').textContent=`${tasks.filter(t=>!t.done).length} left`;}
+function renderTasks(group){const storage=group==='daily'?`dailyTasks:${selectedDate}`:'weeklyTasks',tasks=group==='daily'?getDailyTaskItems(selectedDate):JSON.parse(get(storage,'[]'));const list=$(group==='daily'?'dailyTaskList':'weeklyTaskList');list.innerHTML=tasks.map(t=>`<li><input type="checkbox" data-id="${t.id}" data-source="${t.source||'task'}" ${t.done?'checked':''}><span class="task-copy"><span class="${t.done?'done':''}">${escape(t.label)}</span>${t.time?`<small class="task-time">${escape(t.time)}</small>`:''}</span><button class="delete-task" data-delete="${t.id}" data-source="${t.source||'task'}" data-date="${selectedDate}">×</button></li>`).join('');$(group==='daily'?'dailyCount':'weeklyCount').textContent=`${tasks.filter(t=>!t.done).length} left`;}
 function addTask(group){const input=$(group==='daily'?'dailyTaskInput':'weeklyTaskInput'),storage=group==='daily'?`dailyTasks:${selectedDate}`:'weeklyTasks',tasks=JSON.parse(get(storage,'[]'));if(!input.value.trim())return;if(group==='daily'&&selectedDate>localToday()){const upcoming=getExplicitUpcomingTasks();upcoming.push({id:Date.now(),title:input.value.trim(),dueDate:selectedDate,category:'Personal',done:false});save('upcomingTasks',JSON.stringify(upcoming));renderUpcoming();}else{tasks.push({id:Date.now(),label:input.value.trim(),done:false});save(storage,JSON.stringify(tasks));}input.value='';renderTasks(group);}
 function weatherInfo(code){if([95,96,99].includes(code))return['⛈️','Storm watch','Stormy conditions are possible today.'];if([51,53,55,61,63,65,80,81,82].includes(code))return['🌧️','Rain likely','Rain is in the forecast today.'];if([71,73,75,85,86].includes(code))return['❄️','Snow likely','Snow is in the forecast today.'];if(code>2)return['☁️','Cloudy','A peaceful cloudy day.'];return['☀️','Clear skies','A peaceful day. Enjoy the light.'];}
 async function loadWeather(){try{const p=new URLSearchParams({latitude:43.45,longitude:-79.68,timezone:'America/Toronto',forecast_days:1,current:'temperature_2m,weather_code',daily:'weather_code,temperature_2m_max,sunrise,sunset'}),r=await fetch(`https://api.open-meteo.com/v1/forecast?${p}`),x=await r.json(),d=x.daily,c=weatherInfo(x.current.weather_code);$('weatherIcon').textContent=c[0];$('weatherTemperature').textContent=`${Math.round(x.current.temperature_2m)}°C`;$('weatherSummary').textContent=`${c[1]} · high ${Math.round(d.temperature_2m_max[0])}°C`;$('sunriseTime').textContent=new Date(d.sunrise[0]).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});$('sunsetTime').textContent=new Date(d.sunset[0]).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});$('weatherNote').textContent=c[2];}catch{$('weatherSummary').textContent='Weather unavailable';$('weatherNote').textContent='A peaceful day while we reconnect.';}}
@@ -1412,7 +1486,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 let clockInterval=null;
-function init(){renderSchool();renderMonth();selectDate(selectedDate);renderTasks('weekly');loadWeather();setupStudy();renderMoodPicker();setupSongPlayer();$('clockFormat').value=get('clockFormat','12');customClock=get('clockTime')||null;updateClock();if(!clockInterval)clockInterval=setInterval(updateClock,1000);$('quickNoteInput').value=get('quickNote');$('backgroundUrl').value=get('background','').startsWith('http')?get('background'):'';let bg=get('background');if(bg)root.style.setProperty('--custom-bg-image',`url("${bg}")`);root.dataset.accent=get('accent','purple');root.dataset.theme=get('theme','dark');$('modeToggle').textContent=root.dataset.theme==='light'?'Day':'Night';const pulseOn=localStorage.getItem('icecreamHousePulse')==='on';const parallaxOn=localStorage.getItem('icecreamHouseParallax')!=='off';document.body.classList.toggle('pulse-active',pulseOn);document.body.classList.toggle('parallax-off',!parallaxOn);const parallaxButton=$('parallaxButton');if(parallaxButton) parallaxButton.textContent=parallaxOn?'Parallax mode':'Parallax off';document.querySelectorAll('.tool-card,.widget,.content-section,.custom-panel,.app-page,.quote-panel,.insight-panel').forEach((el,index)=>{el.classList.add('scroll-reveal');el.style.setProperty('--reveal-delay',`${index * 60}ms`);});const revealObserver=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');}else{entry.target.classList.remove('is-visible');}});},{threshold:0.12});document.querySelectorAll('.scroll-reveal').forEach(el=>revealObserver.observe(el));const range=$('focusRange');const focusValue=$('focusValue');if(range&&focusValue){const updateFocus=()=>{focusValue.textContent=`${range.value}%`;document.documentElement.style.setProperty('--focus-level',range.value);};updateFocus();range.oninput=updateFocus;}}
+function init(){renderSchool();renderMonth();scheduleMonthRefresh();selectDate(selectedDate);renderTasks('weekly');loadWeather();setupStudy();renderMoodPicker();setupSongPlayer();$('clockFormat').value=get('clockFormat','12');customClock=get('clockTime')||null;updateClock();if(!clockInterval)clockInterval=setInterval(updateClock,1000);$('quickNoteInput').value=get('quickNote');$('backgroundUrl').value=get('background','').startsWith('http')?get('background'):'';let bg=get('background');if(bg)root.style.setProperty('--custom-bg-image',`url("${bg}")`);root.dataset.accent=get('accent','purple');root.dataset.theme=get('theme','dark');$('modeToggle').textContent=root.dataset.theme==='light'?'Day':'Night';const pulseOn=localStorage.getItem('icecreamHousePulse')==='on';const parallaxOn=localStorage.getItem('icecreamHouseParallax')!=='off';document.body.classList.toggle('pulse-active',pulseOn);document.body.classList.toggle('parallax-off',!parallaxOn);const parallaxButton=$('parallaxButton');if(parallaxButton) parallaxButton.textContent=parallaxOn?'Parallax mode':'Parallax off';document.querySelectorAll('.tool-card,.widget,.content-section,.custom-panel,.app-page,.quote-panel,.insight-panel').forEach((el,index)=>{el.classList.add('scroll-reveal');el.style.setProperty('--reveal-delay',`${index * 60}ms`);});const revealObserver=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');}else{entry.target.classList.remove('is-visible');}});},{threshold:0.12});document.querySelectorAll('.scroll-reveal').forEach(el=>revealObserver.observe(el));const range=$('focusRange');const focusValue=$('focusValue');if(range&&focusValue){const updateFocus=()=>{focusValue.textContent=`${range.value}%`;document.documentElement.style.setProperty('--focus-level',range.value);};updateFocus();range.oninput=updateFocus;}}
 document.querySelectorAll('.swatch').forEach(b=>b.onclick=()=>{root.dataset.accent=b.dataset.accent;save('accent',b.dataset.accent);});$('modeToggle').onclick=()=>{let t=root.dataset.theme==='light'?'dark':'light';root.dataset.theme=t;save('theme',t);$('modeToggle').textContent=t==='light'?'Day':'Night';};
 setupWorkspace();
 renderUpdates();
@@ -1422,6 +1496,14 @@ $('updatesTrigger').onclick=()=>setUpdatesOpen($('updatesPopover').hidden,!$('up
 $('updatesClose').onclick=()=>setUpdatesOpen(false,true);
 document.addEventListener('click',event=>{if(!$('updatesPopover').hidden&&!event.target.closest('#updatesPopover, #updatesTrigger'))setUpdatesOpen(false);});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('updatesPopover').hidden)setUpdatesOpen(false,true);});
+$('accountTrigger').onclick=()=>{
+ const open=$('accountPopover').hidden;
+ setAccountOpen(open,!open);
+ if(open)renderAccountDetails();
+};
+$('accountClose').onclick=()=>setAccountOpen(false,true);
+document.addEventListener('click',event=>{if(!$('accountPopover').hidden&&!event.target.closest('#accountPopover, #accountTrigger'))setAccountOpen(false);});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('accountPopover').hidden)setAccountOpen(false,true);});
 $('moodTrigger').onclick=()=>setMoodOpen($('moodPopover').hidden,!$('moodPopover').hidden);
 $('moodClose').onclick=()=>setMoodOpen(false,true);
 $('moodOptions').onclick=event=>{
@@ -1442,7 +1524,7 @@ if($('pulseButton')){$('pulseButton').onclick=()=>{const enabled=document.body.c
 if($('parallaxButton')){$('parallaxButton').onclick=()=>{const enabled=document.body.classList.toggle('parallax-off');localStorage.setItem('icecreamHouseParallax',enabled?'off':'on');$('parallaxButton').textContent=enabled?'Parallax off':'Parallax mode';};}
 window.addEventListener('scroll',()=>{const shift=window.scrollY*0.5;root.style.setProperty('--scroll-shift',`${shift}px`);}, {passive:true});
  $('dailyTaskForm').onsubmit=e=>{e.preventDefault();addTask('daily');};$('weeklyTaskForm').onsubmit=e=>{e.preventDefault();addTask('weekly');};$('dailyDatePicker').onchange=e=>{const date=parseTypedDate(e.target.value);if(date)selectDate(date);else{e.target.value=displayDate(selectedDate);e.target.setCustomValidity('Use a valid date in YYYY/MM/DD format.');e.target.reportValidity();}};$('dailyDatePicker').oninput=e=>e.target.setCustomValidity('');document.querySelectorAll('[data-page]').forEach(element=>{element.onclick=()=>showPage(element.classList.contains('back-home')?'home':element.dataset.page,true);if(element.matches('[role="button"]'))element.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();showPage(element.dataset.page,true);}};});$('previousMonth').onclick=()=>{viewDate.setMonth(viewDate.getMonth()-1);renderMonth();};$('nextMonth').onclick=()=>{viewDate.setMonth(viewDate.getMonth()+1);renderMonth();};$('weatherRefresh').onclick=loadWeather;
-document.querySelectorAll('.editable-task-list').forEach(list=>list.onclick=e=>{const group=list.id==='dailyTaskList'?'daily':'weekly',storage=group==='daily'?`dailyTasks:${selectedDate}`:'weeklyTasks',trigger=e.target.closest('[data-delete]')||e.target.closest('[data-id]');if(!trigger)return;const idString=trigger.dataset.id||trigger.dataset.delete,source=trigger.dataset.source||'task';if(source==='upcoming'){e.stopImmediatePropagation();let upcoming=getUpcomingTasks(),id=String(idString).replace(/^upcoming:/,'');if(trigger.dataset.delete)upcoming=upcoming.filter(task=>String(task.id)!==id);else upcoming=upcoming.map(task=>String(task.id)===id?{...task,done:!task.done}:task);save('upcomingTasks',JSON.stringify(upcoming));renderUpcoming();renderTasks('daily');return;}if(trigger.dataset.delete){if(source==='event'){const eventId=String(idString).replace(/^event:/,'');let events=getEvents(),event=events.find(item=>getEventId(item)===eventId);if(event?.repeatEnabled!==false&&event?.repeat&&event.repeat!=='none'){const choice=window.prompt('Delete this repeating event:\n1 = only this occurrence\n2 = this and all future occurrences\nCancel = keep it','1');if(choice==='1'){event.deletedDates=[...(event.deletedDates||[]),selectedDate];}else if(choice==='2'){event.deletedFrom=selectedDate;}else{return;}save('events',JSON.stringify(events));}else{save('events',JSON.stringify(events.filter(item=>getEventId(item)!==eventId)));}}else{const taskList=JSON.parse(get(storage,'[]')).filter(task=>String(task.id)!==String(idString));save(storage,JSON.stringify(taskList));}renderTasks(group);renderMonth();return;}if(trigger.dataset.id){if(source==='event'){const eventId=String(idString).replace(/^event:/,'');const events=getEvents().map(event=>getEventId(event)===eventId?{...event,done:!Boolean(event.done)}:event);save('events',JSON.stringify(events));}else{const taskList=JSON.parse(get(storage,'[]'));let t=taskList.find(x=>String(x.id)===String(idString));if(t){t.done=!t.done;save(storage,JSON.stringify(taskList));}}renderTasks(group);renderMonth();}});
+document.querySelectorAll('.editable-task-list').forEach(list=>list.onclick=e=>{const group=list.id==='dailyTaskList'?'daily':'weekly',storage=group==='daily'?`dailyTasks:${selectedDate}`:'weeklyTasks',trigger=e.target.closest('[data-delete]')||e.target.closest('[data-id]');if(!trigger)return;const idString=trigger.dataset.id||trigger.dataset.delete,source=trigger.dataset.source||'task';if(source==='upcoming'){e.stopImmediatePropagation();let upcoming=getUpcomingTasks(),id=String(idString).replace(/^upcoming:/,'');if(trigger.dataset.delete)upcoming=upcoming.filter(task=>String(task.id)!==id);else upcoming=upcoming.map(task=>String(task.id)===id?{...task,done:!task.done}:task);save('upcomingTasks',JSON.stringify(upcoming));renderUpcoming();renderTasks('daily');return;}if(trigger.dataset.delete){if(source==='event'){const eventId=String(idString).replace(/^event:/,'');let events=getEvents(),event=events.find(item=>getEventId(item)===eventId);if(event?.repeatEnabled!==false&&event?.repeat&&event.repeat!=='none'){const choice=window.prompt('Delete this repeating event:\n1 = only this occurrence\n2 = this and all future occurrences\nCancel = keep it','1');if(choice==='1'){event.deletedDates=[...(event.deletedDates||[]),selectedDate];}else if(choice==='2'){event.deletedFrom=selectedDate;}else{return;}save('events',JSON.stringify(events));}else{save('events',JSON.stringify(events.filter(item=>getEventId(item)!==eventId)));}}else{const taskList=JSON.parse(get(storage,'[]')).filter(task=>String(task.id)!==String(idString));save(storage,JSON.stringify(taskList));}renderTasks(group);renderMonth();renderUpcoming();return;}if(trigger.dataset.id){if(source==='event'){const eventId=String(idString).replace(/^event:/,'');const events=getEvents().map(event=>getEventId(event)===eventId?{...event,done:!Boolean(event.done)}:event);save('events',JSON.stringify(events));}else{const taskList=JSON.parse(get(storage,'[]'));let t=taskList.find(x=>String(x.id)===String(idString));if(t){t.done=!t.done;save(storage,JSON.stringify(taskList));}}renderTasks(group);renderMonth();}});
 document.querySelectorAll('.editable-task-list').forEach(list=>list.addEventListener('click',event=>{const trigger=event.target.closest('[data-id]');if(!trigger)return;if(trigger.dataset.source==='event'){event.stopImmediatePropagation();const eventId=String(trigger.dataset.id).replace(/^event:/,'');const events=getEvents();const item=events.find(savedEvent=>getEventId(savedEvent)===eventId);if(item){setEventDoneOnDate(item,selectedDate,!eventDoneOnDate(item,selectedDate));save('events',JSON.stringify(events));}renderTasks('daily');renderMonth();renderUpcoming();return;}if(trigger.dataset.source!=='upcoming')return;event.stopImmediatePropagation();const id=String(trigger.dataset.id).replace(/^upcoming:/,'');let upcoming=getUpcomingTasks().map(task=>String(task.id)===id?{...task,done:!task.done}:task);save('upcomingTasks',JSON.stringify(upcoming));renderUpcoming();renderTasks('daily');},{capture:true}));
 $('upcomingForm').onsubmit=e=>{e.preventDefault();const title=$('upcomingTitle').value.trim(),dueDate=$('upcomingDate').value,category=$('upcomingCategory').value;if(!title||!dueDate)return;if(dueDate<=localToday()){$('upcomingMessage').textContent='Choose a future date for Upcoming.';return;}const upcoming=getUpcomingTasks();upcoming.push({id:Date.now(),title,dueDate,category,done:false});save('upcomingTasks',JSON.stringify(upcoming));e.target.reset();$('upcomingMessage').textContent='Upcoming task added.';renderUpcoming();if(selectedDate===dueDate)renderTasks('daily');};
  $('upcomingTaskList').onclick=e=>{const trigger=e.target.closest('[data-upcoming-delete]')||e.target.closest('[data-upcoming-id]');if(!trigger)return;const id=String(trigger.dataset.upcomingId||trigger.dataset.upcomingDelete),kind=trigger.dataset.upcomingKind,dueDate=trigger.dataset.upcomingDate;if(kind==='daily'){const storage=`dailyTasks:${dueDate}`,tasks=JSON.parse(get(storage,'[]'));const taskId=id.replace(`daily:${dueDate}:`,'');save(storage,JSON.stringify(trigger.dataset.upcomingDelete?tasks.filter(task=>String(task.id)!==taskId):tasks.map(task=>String(task.id)===taskId?{...task,done:!task.done}:task)));}else if(kind==='event'){let events=getEvents(),event=events.find(item=>getEventId(item)===trigger.dataset.upcomingEvent);if(event){if(trigger.dataset.upcomingDelete){if(eventRepeats(event))event.deletedDates=[...(event.deletedDates||[]),dueDate];else events=events.filter(item=>getEventId(item)!==trigger.dataset.upcomingEvent);}else setEventDoneOnDate(event,dueDate,!eventDoneOnDate(event,dueDate));save('events',JSON.stringify(events));}}else{let upcoming=getExplicitUpcomingTasks();upcoming=trigger.dataset.upcomingDelete?upcoming.filter(task=>String(task.id)!==id):upcoming.map(task=>String(task.id)===id?{...task,done:!task.done}:task);save('upcomingTasks',JSON.stringify(upcoming));}renderUpcoming();renderTasks('daily');renderMonth();};
@@ -1458,6 +1540,9 @@ $('eventForm').onsubmit=e=>{
     date:$('eventDate').value,
     name:$('eventTitle').value,
     category:$('eventCategory').value,
+    fullDay:$('eventFullDay').checked,
+    startTime:$('eventFullDay').checked?'':$('eventStart').value,
+    endTime:$('eventFullDay').checked?'':$('eventEnd').value,
     repeat,
     repeatEnabled,
     repeatCount:Math.max(1,Number($('eventRepeatCount').value)||1),
@@ -1470,6 +1555,7 @@ $('eventForm').onsubmit=e=>{
   
   save('events',JSON.stringify(events));
   e.target.reset();
+  $('eventFullDay').dispatchEvent(new Event('change'));
   $('repeatOptions').hidden=true;
   $('eventRepeatCount').disabled=false;
   renderMonth();
@@ -1515,6 +1601,7 @@ function authMode(create){$('signInTab').classList.toggle('active',!create);$('c
  init();
 };
 $('logoutButton').onclick=()=>{
+ setAccountOpen(false);
  clearSessionData();
  const client=getSupabaseClient();
  if(client)client.auth.signOut();

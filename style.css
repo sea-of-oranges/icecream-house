@@ -944,7 +944,8 @@ button {
 }
 
 .calendar-day.today {
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .calendar-day.selected {
@@ -970,15 +971,36 @@ button {
 }
 
 .day-event {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  gap: 4px;
   width: 100%;
   margin-top: 6px;
   overflow: hidden;
   color: var(--accent);
   font-size: 0.6rem;
   font-weight: 800;
+}
+
+.day-event-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.day-event-time,
+.task-time {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.day-event-time {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.52rem;
 }
 
 .day-event-tag {
@@ -1196,6 +1218,16 @@ button {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.editable-task-list .task-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.editable-task-list .task-time {
+  font-size: 0.72rem;
+}
+
 .editable-task-list input {
   accent-color: var(--accent);
 }
@@ -1321,6 +1353,10 @@ button {
 .upcoming-task-copy span {
   color: var(--muted);
   font-size: 0.72rem;
+}
+
+.upcoming-task-copy .upcoming-time {
+  color: var(--accent);
 }
 
 .empty-state {
@@ -2623,6 +2659,55 @@ body.parallax-off .parallax {
     display: none;
   }
 
+.account-popover {
+  position: fixed;
+  z-index: 60;
+  top: 88px;
+  right: max(12px, calc((100vw - var(--page-max)) / 2));
+  width: min(340px, calc(100vw - 24px));
+  padding: 20px;
+  border: 1px solid var(--panel-border);
+  border-radius: 22px;
+  background: var(--panel);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(22px);
+}
+
+.account-popover[hidden] {
+  display: none;
+}
+
+.account-details {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.account-details div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.account-details dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.account-details dd {
+  margin: 0;
+  color: var(--text);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.account-popover .logout-button {
+  width: 100%;
+}
+
 .updates-heading,
 .update-entry-heading {
     display: flex;
@@ -3749,4 +3834,369 @@ body.parallax-off .parallax {
   cursor: pointer;
   width: auto;
   margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .page-shell {
+    width: min(100% - 32px, 960px);
+  }
+
+  .workspace-layout {
+    grid-template-columns: minmax(0, 190px) minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .personal-layout,
+  .study-grade-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .custom-panel,
+  .journal {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 840px) {
+  .workspace-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 76px;
+    z-index: 15;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    padding: 7px;
+  }
+
+  .sidebar-label {
+    display: none;
+  }
+
+  .sidebar-link {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    min-height: 58px;
+    padding: 6px 3px;
+    font-size: 0.72rem;
+    text-align: center;
+  }
+
+  .sidebar-link span {
+    width: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .page-shell {
+    width: min(100% - 20px, 680px);
+  }
+
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 18px;
+  }
+
+  .topbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .topbar-time {
+    min-width: 0;
+    font-size: 0.8rem;
+  }
+
+  .mood-trigger,
+  .updates-trigger {
+    min-width: 0;
+    min-height: 40px;
+    padding: 7px 9px;
+    font-size: 0.76rem;
+    white-space: nowrap;
+  }
+
+  .logout-button {
+    min-height: 40px;
+    padding: 7px 10px;
+    font-size: 0.76rem;
+    white-space: nowrap;
+  }
+
+  .workspace-layout {
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .sidebar {
+    top: 8px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    border-radius: 15px;
+  }
+
+  .sidebar-link {
+    min-height: 56px;
+    font-size: 0.67rem;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+
+  .workspace-view .hero {
+    min-width: 0;
+    gap: 20px;
+    padding: 16px 0 24px;
+  }
+
+  .workspace-view .hero-copy h1 {
+    font-size: clamp(2.5rem, 12vw, 4rem);
+  }
+
+  .workspace-view .dashboard {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .workspace-view .dashboard .clock-card {
+    grid-column: auto;
+  }
+
+  .workspace-view .planner-heading,
+  .workspace-view .task-planner-grid,
+  .planner-layout,
+  .task-planner-grid,
+  .upcoming-layout,
+  .personal-layout,
+  .study-grade-layout,
+  .study-detail-grid,
+  .study-feature-grid,
+  .study-assessment-form,
+  .songs-player,
+  .custom-panel,
+  .journal {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .section-heading,
+  .planner-heading,
+  .personal-heading,
+  .task-header,
+  .study-panel-heading,
+  .study-inline-filter {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .section-heading h2,
+  .panel-copy h2 {
+    font-size: clamp(1.9rem, 9vw, 3rem);
+  }
+
+  .content-section {
+    padding-top: 28px;
+  }
+
+  .card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calendar-panel,
+  .event-panel,
+  .task-planner,
+  .upcoming-form,
+  .upcoming-list-panel,
+  .quote-panel,
+  .insight-panel {
+    min-width: 0;
+    padding: 14px;
+  }
+
+  .event-form,
+  .time-fields,
+  .repeat-custom-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calendar-weekdays,
+  .month-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .calendar-weekdays {
+    font-size: 0.58rem;
+  }
+
+  .calendar-day {
+    min-width: 0;
+    min-height: 48px;
+    padding: 4px;
+    border-radius: 9px;
+  }
+
+  .day-event {
+    gap: 2px;
+    margin-top: 3px;
+    font-size: 0.48rem;
+  }
+
+  .day-event-tag {
+    padding: 2px 3px;
+    font-size: 0.42rem;
+  }
+
+  .month-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .custom-table-wrapper {
+    max-width: 100%;
+  }
+
+  .study-setup,
+  .study-course-page,
+  .study-grades-page {
+    padding: 16px;
+  }
+
+  .study-subnav {
+    max-width: 100%;
+  }
+
+  .study-page-heading,
+  .study-panel-heading {
+    flex-direction: column;
+  }
+
+  .study-chart-actions {
+    flex-wrap: wrap;
+  }
+
+  .home-appearance-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .auth-screen {
+    align-items: start;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .auth-card {
+    width: min(100%, 480px);
+    padding: clamp(20px, 6vw, 28px);
+    border-radius: 22px;
+  }
+
+  .auth-brand {
+    margin-bottom: 24px;
+  }
+
+  .updates-popover,
+  .mood-popover,
+  .account-popover {
+    top: 12px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+
+  .app-page {
+    min-width: 0;
+    margin: 24px 0;
+    padding: 24px 14px;
+    border-radius: 22px;
+  }
+
+  .quick-note-input {
+    min-height: 220px;
+    padding: 14px;
+  }
+
+  .custom-table th,
+  .custom-table td {
+    padding: 8px;
+  }
+
+  .personal-sidebar {
+    position: static;
+    padding: 16px;
+  }
+
+  .background-url-row,
+  .note-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .white-noise-player iframe {
+    min-height: 180px;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .page-shell {
+    width: calc(100% - 16px);
+  }
+
+  .topbar {
+    padding: 9px;
+  }
+
+  .topbar-actions {
+    justify-content: flex-start;
+    gap: 5px;
+  }
+
+  .topbar-time {
+    display: none;
+  }
+
+  .brand-wrap {
+    gap: 7px;
+  }
+
+  .brand-text {
+    font-size: 0.68rem;
+  }
+
+  .sidebar-link {
+    padding-right: 1px;
+    padding-left: 1px;
+    font-size: 0.61rem;
+  }
+
+  .calendar-panel,
+  .event-panel,
+  .task-planner {
+    padding: 10px;
+  }
 }

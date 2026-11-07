@@ -1,10 +1,25 @@
 # Changelog
 
+## Version 1.5 — November 6, 2026
+
+**Calendar & Account Updates**
+- Monthly Calendar: Added a subtle outline for today that updates automatically each day.
+- Monthly Calendar: Added optional event times, displayed in calendar entries, Daily Tasks, and Upcoming; all-day events appear before timed events, which are sorted earliest to latest.
+- Daily Tasks: Keep Upcoming and the monthly calendar in sync when deleting a single occurrence or the remaining series of a recurring event.
+- Account: Added a My Account panel with the signed-in account name, email, and log-out action.
+
+**Responsive Design & Branding**
+- Layout: Adapted the website for desktop, tablet, and phone screen sizes.
+- Branding: Added a closely cropped Icecream House logo as the browser-tab icon.
+
 ## Version 1.4 — November 1, 2026
 
 **Feature Updates & UI Tweaks**
 - Monthly Calendar: Added "Every year" to the repeat options dropdown for tracking anniversaries and annual school events.
 - Monthly Calendar: Simplified the event repeat interface by removing redundant custom interval fields, keeping the UI clean while maintaining the math under the hood.
+- Monthly Calendar: Keep Upcoming in sync when a repeating event occurrence or the remaining series is deleted from Daily Tasks.
+- Monthly Calendar: Save optional event times and show them in calendar entries, Daily Tasks, and Upcoming.
+- Monthly Calendar: List events without a time first, then sort timed events from earliest to latest.
 - Personal Tables: Added a dynamic row sorting system. Financial tables now default to sorting by Date (Descending/Newest first).
 - Table Customizer: Added a "Sort Rows By" interface to choose the active sort column and toggle between Ascending and Descending. Stacked the dropdowns vertically for a better fit on narrow screens.
 

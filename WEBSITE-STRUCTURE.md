@@ -49,6 +49,7 @@ Theme colors appear above Songs and White noise; Background Studio and Personali
 - Weekly due tasks
 - Upcoming task list
 
+
 `script.js` combines user events, daily and upcoming tasks, and HDSB dates when drawing the monthly calendar. Exam/test tasks are prioritized, and busy month cells have scrollable task lists.
 
 ### Tools
@@ -92,5 +93,5 @@ The app uses local storage for its core data. Supabase support is optional and c
 
 ## Styling and external services
 
-`style.css` contains shared components, color themes, page layouts, and responsive breakpoints. It includes wide-landscape rules for the Home dashboard and mobile rules for the top bar, compact sidebar, and Study gradebook.
+`style.css` contains shared components, color themes, page layouts, and responsive breakpoints. Wide screens use the full workspace layout, tablet widths adapt the navigation and content grids, and phone widths stack panels and controls while keeping calendars, forms, and popovers within the viewport. The Home dashboard also has a wide-landscape layout.
 The page also loads Google Fonts, the Supabase JavaScript client, and weather information from Open-Meteo. The HDSB source PDF is linked from the school-calendar widget.
