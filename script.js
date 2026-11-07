@@ -102,56 +102,56 @@ const categoryPalette={Personal:{bg:'rgba(139,92,246,0.18)',color:'#8b5cf6'},Bir
 const escape=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
 const siteUpdates=[
   {version:'1.5',date:'November 6, 2026',items:[
-  'Calendar: Today has a subtle outline that updates automatically each day.',
-  'Calendar: Added optional event times to monthly entries, Daily Tasks, and Upcoming. All-day events appear first, followed by timed events sorted earliest to latest.',
-  'Calendar: Deleting one occurrence or the remaining series of a repeating event from Daily Tasks now updates Upcoming and the monthly calendar.',
-  'Account: Added a My Account panel with the signed-in account name, email, and log-out action.',
-  'Layout: Adapted the website for desktop, tablet, and phone screens.',
-  'Branding: Added a tightly cropped Icecream House logo as the browser-tab icon.'
+  'Calendar: Today is outlined, and the marker changes each day.',
+  'Calendar: Events can include a time, shown in the monthly calendar, Daily Tasks, and Upcoming. Full day events appear first, then events are listed by time.',
+  'Calendar: Deleting one repeat or the rest of a repeating event from Daily Tasks also updates Upcoming and the monthly calendar.',
+  'Account: My Account shows your account name, email, and a log out button.',
+  'Layout: The website now fits desktop, tablet, and phone screens.',
+  'Added a logo for the browser tab icon.'
  ]},
   {version:'1.4',date:'November 1, 2026',items:[
-  'Calendar: Added "Every year" to the repeat options for annual events.',
-  'Calendar: Cleaned up the repeat UI by removing redundant interval fields.',
-  'Personal: Financial tables now default to sorting by Date (Descending).',
-  'Personal: Added sorting controls (Column and Ascending/Descending) to the table Customizer.',
-  'Personal: Stacked the sorting dropdowns to fit perfectly on narrow screens.'
+  'Calendar: Added an Every year option for events.',
+  'Calendar: Simplified the repeat options.',
+  'Personal: Financial tables now show the newest dates first.',
+  'Personal: Added options to sort table rows by column and direction.',
+  'Personal: Stacked the sort options to fit smaller screens.'
  ]},
 
   {version:'1.3',date:'October 25, 2026',items:[
-  'Study: Grouped assessment weight settings into four categories (FPT, Final Exam, Participation, Other).',
-  'Appearance: add a better animation to the website',
-  'Study: Added individual custom percentage weights to specific assessments.',
-  'Study: Added a "Confirm Weights" button to safely auto-balance general category weights to 100%.',
-  'Study: The assessment history table now displays real-time effective weights (~ for auto-distributed).',
-  'Study: Smart weight rollover automatically distributes the weight of empty categories (like Final Exams) to active categories, with a dynamic explanation.',
-  'Personal: Added a close button to the table customizer and the ability to rename tables.',
-  'Personal: Cleaned up the Image Link column with an "Edit Link" toggle button.',
-  'Fix: Prevented multi-select dropdowns from being clipped and fixed textarea heights collapsing on refresh.',
-  'Fix: Daily/Upcoming tasks no longer clutter the monthly calendar view, while official events properly sync down.',
-  'Fix: Clearing the background or resetting the clock now correctly syncs the deletion to the cloud.'
+  'Study: Grouped assessment weights into four categories: FPT, Final Exam, Participation, and Other.',
+  'Appearance: Added a new website animation.',
+  'Study: You can set a percentage weight for each assessment.',
+  'Study: Added a Confirm Weights button to balance category weights to 100%.',
+  'Study: The assessment history now shows each item’s current weight. A tilde marks weights shared automatically.',
+  'Study: Weights from empty categories are shared among categories with marks.',
+  'Personal: Added a close button and table renaming to the table customizer.',
+  'Personal: Added an Edit Link button for image links.',
+  'Fix: Dropdowns no longer get clipped, and text areas keep their height after refresh.',
+  'Fix: Daily and Upcoming tasks no longer appear in the monthly calendar. Calendar events still appear in Daily Tasks.',
+  'Fix: Background and clock changes now sync to the cloud.'
  ]},
   {version:'1.2',date:'October 21, 2026',items:[
-  'Added a new "Personal" workspace to organize custom lists and trackers',
-  'Introduced a command-based typing bar (e.g., `/create_new_table`) to generate content quickly.',
-  'Added dynamic, structured tables with templates for Watching Lists, Financial tracking, Data Management, and Book Lists.',
-  'Updated Image Links to instantly render image thumbnails inside the table rows, with a clean "Edit Link" toggle.',
-  'Upgraded the "Genre" field to use a custom-built Multi-Select dropdown for Watch/Book lists.',
-  'Fixed the calendar sync logic: tasks added in Daily/Weekly/Upcoming no longer clutter the Monthly calendar dots, but Monthly events still sync down into Daily tasks.',
-  'Added a real-time table customizer to rename columns, change data types (Text, Number, Date, Select, Multi-Select), manage dropdown options, and delete tables.',
-  'Enabled automatic cloud and local syncing for all personal tables.'
+  'Added a Personal workspace for custom lists and trackers.',
+  'Added a typing bar with commands such as `/create_new_table` to make content quickly.',
+  'Added table templates for watch lists, finances, data, and books.',
+  'Image links now show previews in table rows, with an Edit Link button.',
+  'Added a custom Genre menu for choosing more than one option in watch and book lists.',
+  'Fix: Daily, Weekly, and Upcoming tasks no longer add clutter to the monthly calendar. Calendar events still appear in Daily Tasks.',
+  'Added a table customizer to rename columns, change their types, edit menu options, and delete tables.',
+  'Personal tables now sync locally and to the cloud.'
  ]},
   {version:'1.1',date:'October 17, 2026',items:[
- 'Added a daily mood check-in with illustrated faces and mood markers in the monthly calendar.',
- 'Added a Songs player for the supplied audio files, with a playlist and playback controls.',
- 'Added a full-width white noise player to Home.',
- 'Moved theme colors above Songs and White noise, and placed those sections above Background Studio and Personalize.',
- 'On wide landscape screens, the clock and weather stay on the left while the welcome text and HDSB calendar sit on the right.',
- 'Removed the two welcome-screen buttons and enlarged the greeting and description without changing the headline size.',
- 'Made the Home background glow match each selected theme color.',
- 'Added a Study workspace with course pages, notes, assessment records, grade estimates, and a multi-course progress chart.',
- 'Updated the HDSB secondary calendar, added daily refresh, and made monthly calendar task lists scrollable.',
- 'Prioritized Exams/tests tasks in daily tasks and the monthly calendar.',
- 'Opened Quick Note and the Pomodoro timer as separate screens with a Back home option.',
+ 'Added a daily mood check in with illustrated faces and mood markers on the monthly calendar.',
+ 'Added a Songs player with a playlist and playback controls.',
+ 'Added a wide white noise player to Home.',
+ 'Moved theme colors above Songs and White noise, followed by Background Studio and Personalize.',
+ 'On wide screens, the clock and weather appear beside the welcome text and HDSB calendar.',
+ 'Removed the two welcome screen buttons and enlarged the greeting and description.',
+ 'Made the Home background glow match the selected theme color.',
+ 'Added a Study workspace with course pages, notes, assessments, grade estimates, and a progress chart.',
+ 'Updated the HDSB calendar and made monthly calendar task lists scrollable.',
+ 'Show Exams and tests tasks first in Daily Tasks and the monthly calendar.',
+ 'Opened Quick Note and the Pomodoro timer as separate screens with a Back home button.',
  'Added an Updates panel for website changes and fixes.'
 ]}];
  function renderUpdates(){
