@@ -2704,6 +2704,37 @@ body.parallax-off .parallax {
   overflow-wrap: anywhere;
 }
 
+.account-school-board {
+  display: grid;
+  gap: 9px;
+  margin: 18px 0;
+}
+
+.account-school-board label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.account-school-board select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 11px;
+  color: var(--text);
+  background: var(--input-bg);
+}
+
+.account-board-message {
+  min-height: 1.2em;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .account-popover .logout-button {
   width: 100%;
 }

@@ -18,7 +18,8 @@ Website(Icecream house)/
 `index.html` defines the document and loads the stylesheet and scripts. The page contains:
 
 - **Authentication screen** — sign-in, account creation, and password recovery.
-- **Persistent top bar** — Icecream House home link at the left; live clock, Mood today, Updates, and log out at the right.
+- **My Account panel** — account details, school-board preference, and log out.
+- **Persistent top bar** — Icecream House home link at the left; live clock, Mood today, Updates, and My Account at the right.
 - **Mood check-in** — Saves the chosen illustrated face for the current date and shows it in the monthly calendar.
 - **Workspace layout** — sidebar navigation beside the main content.
 - **Updates popover** — versioned release notes, opened from the top bar and dismissed by its close control, outside click, or Escape.
@@ -33,13 +34,13 @@ The sidebar switches between four workspace views. The JavaScript moves the exis
 - Welcome message
 - Flip clock and clock controls
 - Halton weather
-- Upcoming HDSB secondary-school calendar
+- Upcoming secondary-school calendar for the selected board (HDSB or HCDSB)
 - Theme colors and light/dark mode
 - Songs player with the local playlist and playback controls
 - White noise player
 - Background Studio and personalization controls
 
-Theme colors appear above Songs and White noise; Background Studio and Personalize follow those sections. On wide landscape screens, the clock and weather stay together on the left while the welcome text sits above the HDSB calendar on the right. Portrait and narrow layouts retain a stacked arrangement.
+Theme colors appear above Songs and White noise; Background Studio and Personalize follow those sections. On wide landscape screens, the clock and weather stay together on the left while the welcome text sits above the selected board's calendar on the right. Portrait and narrow layouts retain a stacked arrangement.
 
 ### Calendar & Events
 
@@ -50,7 +51,7 @@ Theme colors appear above Songs and White noise; Background Studio and Personali
 - Upcoming task list
 
 
-`script.js` combines user events, daily and upcoming tasks, and HDSB dates when drawing the monthly calendar. Exam/test tasks are prioritized, and busy month cells have scrollable task lists.
+`script.js` combines user events, daily and upcoming tasks, and the selected board's school dates when drawing the monthly calendar. The board preference is changed in My Account and saved with the account. The Home calendar refreshes its upcoming list daily. Exam/test tasks are prioritized, and busy month cells have scrollable task lists.
 
 ### Tools
 
@@ -80,7 +81,7 @@ Each tool opens as a standalone screen within the app shell, rather than as a se
 - Reading and writing account-scoped browser storage.
 - Restoring sessions and coordinating optional Supabase sync.
 - Setting up sidebar, browser-history, and tool navigation.
-- Rendering calendars, task lists, the HDSB schedule, and updates.
+- Rendering calendars, task lists, the selected HDSB or HCDSB schedule, and updates.
 - Saving daily mood choices and rendering their illustrations in the mood picker and calendar.
 - Managing course setup, course-specific notes, assessment records, grade estimates, and the SVG course comparison chart.
 - Handling event repeats, task completion, deletion, and forms.
@@ -94,4 +95,4 @@ The app uses local storage for its core data. Supabase support is optional and c
 ## Styling and external services
 
 `style.css` contains shared components, color themes, page layouts, and responsive breakpoints. Wide screens use the full workspace layout, tablet widths adapt the navigation and content grids, and phone widths stack panels and controls while keeping calendars, forms, and popovers within the viewport. The Home dashboard also has a wide-landscape layout.
-The page also loads Google Fonts, the Supabase JavaScript client, and weather information from Open-Meteo. The HDSB source PDF is linked from the school-calendar widget.
+The page also loads Google Fonts, the Supabase JavaScript client, and weather information from Open-Meteo. The selected board's official site or school-year calendar is linked from the school-calendar widget.

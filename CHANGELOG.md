@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.6 — November 6, 2026
+
+**School Calendar**
+- My Account: Choose HDSB or HCDSB to update the secondary school calendar on Home and in the monthly calendar. The selection is saved with the account.
+
 ## Version 1.5 — November 6, 2026
 
 **Calendar & Account Updates**

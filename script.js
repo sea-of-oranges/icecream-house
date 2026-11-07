@@ -12,6 +12,8 @@ const clearSessionData=()=>{
  localStorage.removeItem('icecreamHouseSession');
 };
 const normalizeUsername=value=>String(value||'').trim().replace(/\s+/g,' ').slice(0,30);
+const normalizeSchoolBoard=board=>board==='HCDSB'?'HCDSB':'HDSB';
+const selectedSchoolBoard=()=>normalizeSchoolBoard(get('schoolBoard','HDSB'));
 const localToday=()=>{const date=new Date();return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;};
 let lastMonthRenderDate=localToday();
 const authMessage=reason=>reason==='Email logins are disabled'?'Enable Authentication > Providers > Email in your Supabase project.':reason==='Invalid login credentials'?'Username or password does not match.':reason;
@@ -96,11 +98,38 @@ const hdsbSecondaryEvents=[
  {date:'2027-06-22',endDate:'2027-06-28',title:'Semester 2 - Secondary Final Evaluation Block',type:'Secondary'},
  {date:'2027-06-29',title:'Last day of instruction for secondary students',type:'Secondary'}
 ];
-const hdsbEventsOnDate=date=>hdsbSecondaryEvents.filter(event=>event.date<=date&&(event.endDate||event.date)>=date).map(event=>({label:event.title,category:event.type}));
+const hcdsbSecondaryEvents=[
+ {date:'2026-09-02',title:'PA Day (Provincial Priorities)',type:'PA Day'},
+ {date:'2026-09-03',title:'PA Day (Provincial Priorities)',type:'PA Day'},
+ {date:'2026-09-08',title:'First Day of School for most HCDSB Students',type:'Secondary'},
+ {date:'2026-10-09',title:'PA Day (Elementary & Secondary)',type:'PA Day'},
+ {date:'2026-10-12',title:'Thanksgiving',type:'Holiday'},
+ {date:'2026-11-27',title:'PA Day (Elementary Reporting/Secondary Priorities)',type:'PA Day'},
+ {date:'2026-12-18',title:'Early dismissal for all students (90 mins. early)',type:'Secondary'},
+ {date:'2026-12-21',endDate:'2027-01-01',title:'Christmas Break',type:'School holiday'},
+ {date:'2027-01-28',endDate:'2027-02-03',title:'Secondary Exams (Semester 1)',type:'Secondary'},
+ {date:'2027-02-05',title:'PA Day (Secondary only/Secondary Reporting)',type:'PA Day'},
+ {date:'2027-02-08',title:'First Day of Term 2 / Semester 2',type:'Secondary'},
+ {date:'2027-02-15',title:'Family Day',type:'Holiday'},
+ {date:'2027-03-15',endDate:'2027-03-19',title:'March Break',type:'School holiday'},
+ {date:'2027-03-26',title:'Good Friday',type:'Holiday'},
+ {date:'2027-03-29',title:'Easter Monday',type:'Holiday'},
+ {date:'2027-04-19',title:'PA Day (Provincial Priorities)',type:'PA Day'},
+ {date:'2027-05-24',title:'Victoria Day',type:'Holiday'},
+ {date:'2027-06-01',title:'Ontario Day (Instructional Day)',type:'Secondary'},
+ {date:'2027-06-22',endDate:'2027-06-28',title:'Secondary Exams (Semester 2)',type:'Secondary'},
+ {date:'2027-06-29',title:'Last Day of Instruction (Secondary)',type:'Secondary'},
+ {date:'2027-06-30',title:'PA Day (Secondary)',type:'PA Day'}
+];
+const selectedSchoolEvents=()=>selectedSchoolBoard()==='HCDSB'?hcdsbSecondaryEvents:hdsbSecondaryEvents;
+const schoolBoardEventsOnDate=date=>selectedSchoolEvents().filter(event=>event.date<=date&&(event.endDate||event.date)>=date).map(event=>({label:event.title,category:event.type}));
 const categoryPalette={Personal:{bg:'rgba(139,92,246,0.18)',color:'#8b5cf6'},Birthday:{bg:'rgba(244,114,182,0.18)',color:'#ec4899'},'School event':{bg:'rgba(59,130,246,0.18)',color:'#2563eb'},'Club event':{bg:'rgba(16,185,129,0.18)',color:'#10b981'},Health:{bg:'rgba(34,197,94,0.18)',color:'#22c55e'},Lessons:{bg:'rgba(250,226,142,0.28)',color:'#b08a16'},Homework:{bg:'rgba(251,191,36,0.18)',color:'#f59e0b'},Study:{bg:'rgba(168,85,247,0.18)',color:'#a855f7'},Social:{bg:'rgba(249,115,22,0.18)',color:'#f97316'},Appointment:{bg:'rgba(239,68,68,0.18)',color:'#ef4444'},Holiday:{bg:'rgba(139,92,246,0.18)',color:'#8b5cf6'},'PA Day':{bg:'rgba(59,130,246,0.18)',color:'#2563eb'},'School holiday':{bg:'rgba(239,68,68,0.18)',color:'#ef4444'},Secondary:{bg:'rgba(16,185,129,0.18)',color:'#10b981'}};
   categoryPalette['Exams/tests']={bg:'rgba(222,158,55,0.2)',color:'#c88322'};
 const escape=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
 const siteUpdates=[
+  {version:'1.6',date:'November 6, 2026',items:[
+  'Account: Choose HDSB or HCDSB in My Account to update the secondary school calendar on Home and in the monthly calendar.'
+ ]},
   {version:'1.5',date:'November 6, 2026',items:[
   'Calendar: Today is outlined, and the marker changes each day.',
   'Calendar: Events can include a time, shown in the monthly calendar, Daily Tasks, and Upcoming. Full day events appear first, then events are listed by time.',
@@ -187,6 +216,8 @@ async function renderAccountDetails(){
   }else $('accountName').textContent=accountName;
  }else $('accountName').textContent=accountName;
  $('accountEmail').textContent=email||'Email unavailable';
+ $('accountBoardInput').value=selectedSchoolBoard();
+ $('accountBoardMessage').textContent='';
 }
 const moodChoices=[
  ['happy','Happy','mood-faces/happy.png'],
@@ -405,9 +436,14 @@ document.querySelectorAll('.swatch').forEach(b=>b.onclick=()=>{
 function renderSchool(){
  const list=$('calendarList');
  const startDate=localToday();
+ const board=selectedSchoolBoard();
+ const source=$('schoolCalendarSource');
  const formatDate=date=>new Date(`${date}T12:00:00`).toLocaleDateString([],{month:'short',day:'numeric'});
+ $('schoolCalendarTitle').textContent=`${board} secondary calendar`;
+ source.href=board==='HCDSB'?'https://www.hcdsb.org/':'https://media-003-ca.cdn.govstack.com/hdsb-015-ca/media/2enbintv/hdsb-school-year-calendar.pdf';
+ source.textContent=board==='HCDSB'?'Official HCDSB website ↗':'Official HDSB school-year calendar ↗';
  $('hdsbCalendarRange').textContent='Upcoming';
- const visibleEvents=hdsbSecondaryEvents.filter(event=>(event.endDate||event.date)>=startDate).sort((a,b)=>a.date.localeCompare(b.date));
+ const visibleEvents=selectedSchoolEvents().filter(event=>(event.endDate||event.date)>=startDate).sort((a,b)=>a.date.localeCompare(b.date));
  list.innerHTML=visibleEvents.map(event=>`<li><div><strong>${escape(event.title)}</strong><span>${formatDate(event.date)}${event.endDate?` – ${formatDate(event.endDate)}`:''}</span></div><em>${escape(event.type)}</em></li>`).join('');
  if(hdsbCalendarRefreshTimer)clearTimeout(hdsbCalendarRefreshTimer);
  const nextRefresh=new Date();
@@ -427,7 +463,7 @@ function renderMonth() {
     const out = d.getMonth() !== m;
     const isToday = k === today;
     
-    // ONLY pull Calendar events and HDSB events for the dots (ignore daily/upcoming tasks)
+    // Only calendar events and the selected board's school dates appear here.
     const calendarEvents = getEvents()
       .filter(event => eventOccursOnDate(event, k))
       .map(event => ({
@@ -437,7 +473,7 @@ function renderMonth() {
         sortTime: event.startTime || ''
       }));
       
-    const tasks = [...calendarEvents, ...hdsbEventsOnDate(k)].sort((a, b) => {
+    const tasks = [...calendarEvents, ...schoolBoardEventsOnDate(k)].sort((a, b) => {
       if (!a.sortTime) return b.sortTime ? -1 : 0;
       if (!b.sortTime) return 1;
       return a.sortTime.localeCompare(b.sortTime);
@@ -1504,6 +1540,13 @@ $('accountTrigger').onclick=()=>{
 $('accountClose').onclick=()=>setAccountOpen(false,true);
 document.addEventListener('click',event=>{if(!$('accountPopover').hidden&&!event.target.closest('#accountPopover, #accountTrigger'))setAccountOpen(false);});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('accountPopover').hidden)setAccountOpen(false,true);});
+$('accountBoardInput').onchange=()=>{
+ const board=normalizeSchoolBoard($('accountBoardInput').value);
+ save('schoolBoard',board);
+ renderSchool();
+ renderMonth();
+ $('accountBoardMessage').textContent=`${board} calendar saved and updated.`;
+};
 $('moodTrigger').onclick=()=>setMoodOpen($('moodPopover').hidden,!$('moodPopover').hidden);
 $('moodClose').onclick=()=>setMoodOpen(false,true);
 $('moodOptions').onclick=event=>{
