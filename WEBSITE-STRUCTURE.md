@@ -94,5 +94,5 @@ The app uses local storage for its core data. Supabase support is optional and c
 
 ## Styling and external services
 
-`style.css` contains shared components, color themes, page layouts, and responsive breakpoints. Wide screens use the full workspace layout, tablet widths adapt the navigation and content grids, and phone widths stack panels and controls while keeping calendars, forms, and popovers within the viewport. The Home dashboard also has a wide-landscape layout.
+`style.css` contains shared components, color themes, page layouts, and responsive breakpoints. When a custom background image is active, panels, widgets, form controls, and calendar days use semi-transparent surfaces tuned for the current light or dark theme to retain text contrast. Wide screens use the full workspace layout, tablet widths adapt the navigation and content grids, and phone widths stack panels and controls while keeping calendars, forms, and popovers within the viewport. The Home dashboard also has a wide-landscape layout.
 The page also loads Google Fonts, the Supabase JavaScript client, and weather information from Open-Meteo. The selected board's official site or school-year calendar is linked from the school-calendar widget.

@@ -94,6 +94,22 @@
 :root[data-theme="light"][data-accent="blue"] { --accent: #3975b8; --accent-strong: #28568d; --accent-soft: rgba(57, 117, 184, 0.14); --glow: rgba(57, 117, 184, 0.24); --background-glow: rgba(57, 117, 184, 0.2); --background-glow-secondary: rgba(145, 200, 255, 0.22); --bg-deep: #eff6ff; --bg-mid: #dbe9f8; --panel: rgba(246, 250, 255, 0.74); }
 :root[data-theme="light"][data-accent="classic"] { --accent: #6c6565; --accent-strong: #363232; --accent-soft: rgba(0, 0, 0, 0.08); --glow: rgba(0, 0, 0, 0.12); --button-bg: #ffffff; --button-text: #111111; --background-glow: rgba(0, 0, 0, 0.025); --background-glow-secondary: rgba(255, 255, 255, 0.72); --bg-deep: #ffffff; --bg-mid: #f5f5f3; --panel: rgba(255, 255, 255, 0.84); --panel-border: rgba(25, 25, 25, 0.09); --text: #171717; --muted: rgba(23, 23, 23, 0.68); }
 
+:root.has-custom-background {
+  --custom-panel-highlight: rgba(25, 31, 49, 0.5);
+  --custom-panel-surface: rgba(13, 18, 31, 0.5);
+  --custom-widget-surface: rgba(12, 17, 29, 0.5);
+  --custom-calendar-surface: rgba(12, 17, 29, 0.5);
+  --input-bg: rgba(13, 18, 31, 0.5);
+}
+
+:root[data-theme="light"].has-custom-background {
+  --custom-panel-highlight: rgba(255, 255, 255, 0.5);
+  --custom-panel-surface: rgba(248, 250, 255, 0.5);
+  --custom-widget-surface: rgba(255, 255, 255, 0.5);
+  --custom-calendar-surface: rgba(255, 255, 255, 0.5);
+  --input-bg: rgba(255, 255, 255, 0.5);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -612,6 +628,11 @@ button {
   transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
 }
 
+:root.has-custom-background .glass-panel,
+:root.has-custom-background .tool-card {
+  background: linear-gradient(180deg, var(--custom-panel-highlight), var(--custom-panel-surface));
+}
+
 .dashboard {
   display: grid;
   grid-template-columns: repeat(2, minmax(180px, 1fr));
@@ -620,6 +641,10 @@ button {
   border-radius: 28px;
   transform: translateY(18px);
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025));
+}
+
+:root.has-custom-background .dashboard {
+  background: linear-gradient(145deg, var(--custom-panel-highlight), var(--custom-panel-surface));
 }
 
 .widget {
@@ -638,6 +663,20 @@ button {
 
 :root[data-theme="light"] .widget {
   background: rgba(255, 255, 255, 0.38);
+}
+
+:root.has-custom-background .widget {
+  background: var(--custom-widget-surface);
+  backdrop-filter: blur(14px);
+}
+
+.has-custom-background .calendar-day:not(.selected) {
+  background: var(--custom-calendar-surface);
+  backdrop-filter: blur(8px);
+}
+
+:root.has-custom-background .study-subnav {
+  background: var(--custom-panel-surface);
 }
 
 .widget-label {
