@@ -142,16 +142,32 @@ body {
 }
 
 .auth-screen {
+  --bg-deep: #ffffff;
+  --bg-mid: #ffffff;
+  --panel: rgba(255, 255, 255, 0.94);
+  --panel-border: rgba(25, 25, 25, 0.1);
+  --text: #171717;
+  --muted: rgba(23, 23, 23, 0.68);
+  --accent: #6c6565;
+  --accent-strong: #363232;
+  --accent-soft: rgba(0, 0, 0, 0.08);
+  --glow: rgba(0, 0, 0, 0.08);
+  --control-bg: rgba(0, 0, 0, 0.04);
+  --control-hover: rgba(0, 0, 0, 0.08);
+  --button-bg: #ffffff;
+  --button-text: #111111;
+  --input-bg: #f5f5f5;
+  --background-glow: rgba(0, 0, 0, 0.025);
+  --background-glow-secondary: rgba(0, 0, 0, 0.015);
+  --card-shadow: 0 30px 60px rgba(0, 0, 0, 0.12);
   position: fixed;
   inset: 0;
   z-index: 100;
   display: grid;
   place-items: center;
   padding: 24px;
-  background: var(--bg-deep);
-  background-image:
-    radial-gradient(circle at 20% 20%, var(--background-glow), transparent 38%),
-    radial-gradient(circle at 85% 80%, var(--background-glow-secondary), transparent 42%);
+  background: #ffffff;
+  color: var(--text);
   overflow: auto;
 }
 

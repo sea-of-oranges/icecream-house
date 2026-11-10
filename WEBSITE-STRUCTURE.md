@@ -18,6 +18,7 @@ Website(Icecream house)/
 `index.html` defines the document and loads the stylesheet and scripts. The page contains:
 
 - **Authentication screen** — sign-in, account creation, and password recovery.
+- The authentication screen always uses a white day appearance. New accounts start with Day mode and the white classic accent; existing saved appearance preferences are preserved.
 - **My Account panel** — account details, school-board preference, and log out.
 - **Persistent top bar** — Icecream House home link at the left; live clock, Mood today, Updates, and My Account at the right.
 - **Mood check-in** — Saves the chosen illustrated face for the current date and shows it in the monthly calendar.

@@ -30,6 +30,10 @@ const clearSessionData = () => {
 const normalizeUsername = value => String(value || '').trim().replace(/\s+/g, ' ').slice(0, 30);
 const normalizeSchoolBoard = board => board === 'HCDSB' ? 'HCDSB' : 'HDSB';
 const selectedSchoolBoard = () => normalizeSchoolBoard(get('schoolBoard', 'HDSB'));
+const setNewAccountAppearance = (theme = 'light', accent = 'classic') => {
+  if (!get('theme')) save('theme', theme);
+  if (!get('accent')) save('accent', accent);
+};
 const localToday = () => {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -122,6 +126,10 @@ async function signInWithSupabase(email, password, username) {
   };
   localStorage.setItem('icecreamHouseSession', normalizeUsername(username || data.user
     .user_metadata?.username || email));
+  if (data.user.user_metadata?.theme || data.user.user_metadata?.accent) {
+    setNewAccountAppearance(data.user.user_metadata.theme || 'light', data.user.user_metadata
+      .accent || 'classic');
+  }
   return {
     ok: true,
     session: data.session
@@ -142,7 +150,9 @@ async function signUpWithSupabase(username, email, password, hint = '') {
     options: {
       data: {
         username: normalizeUsername(username),
-        password_hint: hint
+        password_hint: hint,
+        theme: 'light',
+        accent: 'classic'
       }
     }
   });
@@ -155,6 +165,7 @@ async function signUpWithSupabase(username, email, password, hint = '') {
     reason: 'ACCOUNT_CONFIRMATION_REQUIRED'
   };
   localStorage.setItem('icecreamHouseSession', normalizeUsername(username));
+  setNewAccountAppearance('light', 'classic');
   return {
     ok: true,
     session: data.session
@@ -3314,6 +3325,7 @@ authForm.onsubmit = async e => {
     hint
   }));
   localStorage.setItem('icecreamHouseSession', u);
+  setNewAccountAppearance();
   authScreen.classList.add('is-hidden');
   init();
 };
